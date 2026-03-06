@@ -1,0 +1,1463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Understanding CUDA Memory Hierarchy: A Practical Guide | Alireza Olama</title>
+    <meta name="description" content="A comprehensive guide to CUDA memory hierarchy including global, shared, local memory, registers, and practical optimization techniques with code examples." />
+    <meta name="keywords" content="CUDA, GPU programming, memory hierarchy, shared memory, global memory, GPU optimization, HPC" />
+    <meta name="author" content="Alireza Olama" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://alirezalm.github.io/posts/cuda-memory-hierarchy.html" />
+    <meta property="og:title" content="Understanding CUDA Memory Hierarchy: A Practical Guide" />
+    <meta property="og:description" content="Master GPU memory optimization with this comprehensive guide to CUDA memory types, access patterns, and performance tuning." />
+    
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <style>
+      /* Blog Post Styles */
+      .post-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        z-index: 100;
+        border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+      }
+      
+      body.dark-mode .post-nav {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(129, 140, 248, 0.1);
+      }
+      
+      .post-nav .logo {
+        font-weight: 700;
+        font-size: 1.1rem;
+        background: var(--accent);
+        color: #ffffff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        text-decoration: none;
+      }
+      
+      .post-nav-links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      
+      .post-nav-links a {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--muted);
+        transition: color 0.2s ease;
+      }
+      
+      .post-nav-links a:hover {
+        color: var(--accent);
+      }
+      
+      .post-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #4f46e5 100%);
+        padding: 160px 24px 100px;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .post-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+      }
+      
+      .post-hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
+      .post-category {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+      }
+      
+      .post-hero h1 {
+        font-size: 2.8rem;
+        margin-bottom: 20px;
+        line-height: 1.2;
+        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      .post-hero .subtitle {
+        font-size: 1.25rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto 30px;
+        line-height: 1.6;
+      }
+      
+      .post-meta {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        font-size: 0.95rem;
+        opacity: 0.85;
+      }
+      
+      .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .post-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 60px 24px 100px;
+      }
+      
+      .post-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: var(--ink);
+      }
+      
+      .post-content h2 {
+        font-size: 1.8rem;
+        margin: 60px 0 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--highlight);
+        color: var(--ink);
+      }
+      
+      .post-content h3 {
+        font-size: 1.4rem;
+        margin: 40px 0 16px;
+        color: var(--ink);
+      }
+      
+      .post-content p {
+        margin-bottom: 24px;
+        color: var(--muted);
+      }
+      
+      .post-content strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      
+      .post-content ul, .post-content ol {
+        margin-bottom: 24px;
+        padding-left: 28px;
+      }
+      
+      .post-content li {
+        margin-bottom: 12px;
+        color: var(--muted);
+      }
+      
+      .post-content a {
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      
+      .post-content a:hover {
+        color: var(--accent-dark);
+      }
+      
+      /* Code Blocks */
+      .code-block {
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 32px 0;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+      
+      .code-header {
+        background: #0f172a;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .code-lang {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      
+      .code-filename {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-family: "JetBrains Mono", monospace;
+      }
+      
+      .code-block pre {
+        margin: 0;
+        padding: 24px;
+        overflow-x: auto;
+      }
+      
+      .code-block code {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      
+      /* Syntax highlighting */
+      .code-block .keyword { color: #c084fc; }
+      .code-block .type { color: #38bdf8; }
+      .code-block .function { color: #fbbf24; }
+      .code-block .string { color: #34d399; }
+      .code-block .number { color: #fb923c; }
+      .code-block .comment { color: #64748b; font-style: italic; }
+      .code-block .directive { color: #f472b6; }
+      .code-block .variable { color: #e2e8f0; }
+      
+      /* Inline code */
+      .post-content code:not(.code-block code) {
+        background: var(--highlight);
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9em;
+        color: var(--accent);
+      }
+      
+      body.dark-mode .post-content code:not(.code-block code) {
+        background: rgba(129, 140, 248, 0.15);
+        color: var(--accent-light);
+      }
+      
+      /* Diagrams */
+      .diagram-container {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 40px;
+        margin: 40px 0;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(79, 70, 229, 0.1);
+      }
+      
+      body.dark-mode .diagram-container {
+        background: rgba(30, 41, 59, 0.8);
+        border-color: rgba(129, 140, 248, 0.1);
+      }
+      
+      .diagram-title {
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 24px;
+        color: var(--ink);
+      }
+      
+      .memory-hierarchy-svg {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        display: block;
+      }
+      
+      .diagram-caption {
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-top: 20px;
+        font-style: italic;
+      }
+      
+      /* Info boxes */
+      .info-box {
+        border-radius: 12px;
+        padding: 24px;
+        margin: 32px 0;
+        border-left: 4px solid;
+      }
+      
+      .info-box.tip {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: #10b981;
+      }
+      
+      .info-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border-color: #f59e0b;
+      }
+      
+      .info-box.note {
+        background: rgba(79, 70, 229, 0.1);
+        border-color: var(--accent);
+      }
+      
+      .info-box-title {
+        font-weight: 700;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .info-box.tip .info-box-title { color: #10b981; }
+      .info-box.warning .info-box-title { color: #f59e0b; }
+      .info-box.note .info-box-title { color: var(--accent); }
+      
+      .info-box p {
+        margin-bottom: 0;
+        font-size: 0.95rem;
+      }
+      
+      /* Table of Contents */
+      .toc {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px 32px;
+        margin: 40px 0;
+        border: 1px solid rgba(79, 70, 229, 0.1);
+      }
+      
+      body.dark-mode .toc {
+        background: rgba(30, 41, 59, 0.8);
+        border-color: rgba(129, 140, 248, 0.1);
+      }
+      
+      .toc-title {
+        font-weight: 700;
+        margin-bottom: 16px;
+        font-size: 1.1rem;
+        color: var(--ink);
+      }
+      
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .toc li {
+        margin-bottom: 8px;
+      }
+      
+      .toc a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s ease;
+      }
+      
+      .toc a:hover {
+        color: var(--accent);
+      }
+      
+      /* Performance comparison table */
+      .perf-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 32px 0;
+        font-size: 0.95rem;
+      }
+      
+      .perf-table th, .perf-table td {
+        padding: 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--highlight);
+      }
+      
+      .perf-table th {
+        background: var(--highlight);
+        font-weight: 600;
+        color: var(--ink);
+      }
+      
+      .perf-table td {
+        color: var(--muted);
+      }
+      
+      .perf-table tr:hover td {
+        background: rgba(79, 70, 229, 0.05);
+      }
+      
+      body.dark-mode .perf-table th {
+        background: rgba(129, 140, 248, 0.1);
+      }
+      
+      /* Tags */
+      .post-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 60px;
+        padding-top: 30px;
+        border-top: 1px solid var(--highlight);
+      }
+      
+      .post-tag {
+        font-size: 0.85rem;
+        padding: 8px 16px;
+        background: var(--highlight);
+        border-radius: 20px;
+        color: var(--accent);
+        font-weight: 500;
+      }
+      
+      body.dark-mode .post-tag {
+        background: rgba(129, 140, 248, 0.15);
+        color: var(--accent-light);
+      }
+      
+      /* Author card */
+      .author-card {
+        display: flex;
+        gap: 24px;
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 32px;
+        margin-top: 60px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(79, 70, 229, 0.1);
+      }
+      
+      body.dark-mode .author-card {
+        background: rgba(30, 41, 59, 0.8);
+        border-color: rgba(129, 140, 248, 0.1);
+      }
+      
+      .author-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+      
+      .author-info h4 {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+      }
+      
+      .author-info p {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+      }
+      
+      .author-links {
+        display: flex;
+        gap: 12px;
+      }
+      
+      .author-links a {
+        color: var(--muted);
+        font-size: 1.2rem;
+        transition: color 0.2s ease;
+      }
+      
+      .author-links a:hover {
+        color: var(--accent);
+      }
+      
+      /* Footer navigation */
+      .post-footer-nav {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 60px;
+        padding-top: 30px;
+        border-top: 1px solid var(--highlight);
+      }
+      
+      .post-footer-nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--accent);
+        font-weight: 500;
+        transition: transform 0.2s ease;
+      }
+      
+      .post-footer-nav a:hover {
+        transform: translateX(5px);
+      }
+      
+      .post-footer-nav a:first-child:hover {
+        transform: translateX(-5px);
+      }
+      
+      @media (max-width: 768px) {
+        .post-hero h1 {
+          font-size: 1.8rem;
+        }
+        
+        .post-hero .subtitle {
+          font-size: 1rem;
+        }
+        
+        .post-meta {
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        .post-content h2 {
+          font-size: 1.4rem;
+        }
+        
+        .diagram-container {
+          padding: 20px;
+        }
+        
+        .author-card {
+          flex-direction: column;
+          text-align: center;
+        }
+        
+        .author-avatar {
+          margin: 0 auto;
+        }
+        
+        .author-links {
+          justify-content: center;
+        }
+        
+        .code-block pre {
+          padding: 16px;
+        }
+        
+        .code-block code {
+          font-size: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="post-nav">
+      <a href="../index.html" class="logo">AO</a>
+      <div class="post-nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../blog.html">Blog</a>
+        <a href="../index.html#research">Research</a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="post-hero">
+      <div class="post-hero-content">
+        <span class="post-category"><i class="fas fa-microchip"></i> GPU Programming</span>
+        <h1>Understanding CUDA Memory Hierarchy</h1>
+        <p class="subtitle">A practical guide to GPU memory types, access patterns, and optimization techniques for high-performance computing</p>
+        <div class="post-meta">
+          <span><i class="fas fa-user"></i> Alireza Olama</span>
+          <span><i class="fas fa-calendar"></i> March 6, 2026</span>
+          <span><i class="fas fa-clock"></i> 15 min read</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Article Content -->
+    <article class="post-container">
+      <div class="post-content">
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <div class="toc-title"><i class="fas fa-list"></i> Table of Contents</div>
+          <ol>
+            <li><a href="#introduction">Introduction: Why Memory Matters</a></li>
+            <li><a href="#hierarchy-overview">The CUDA Memory Hierarchy Overview</a></li>
+            <li><a href="#registers">Registers: The Fastest Memory</a></li>
+            <li><a href="#shared-memory">Shared Memory: The Programmable Cache</a></li>
+            <li><a href="#global-memory">Global Memory: The Main Workhorse</a></li>
+            <li><a href="#constant-texture">Constant & Texture Memory</a></li>
+            <li><a href="#optimization">Practical Optimization Techniques</a></li>
+            <li><a href="#summary">Summary & Best Practices</a></li>
+          </ol>
+        </div>
+
+        <!-- Introduction -->
+        <h2 id="introduction">1. Introduction: Why Memory Matters</h2>
+        
+        <p>
+          If you've ever wondered why your CUDA kernel isn't hitting the theoretical peak performance of your GPU, 
+          the answer is almost always <strong>memory</strong>. Modern GPUs have incredible computational throughput—an 
+          NVIDIA A100 can perform over 19 TFLOPS of FP32 operations—but feeding all those compute units with data 
+          is the real challenge.
+        </p>
+        
+        <p>
+          Understanding the CUDA memory hierarchy is the single most important skill for writing efficient GPU code. 
+          In this guide, we'll explore each memory type, when to use it, and practical patterns for optimization.
+        </p>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> Key Insight</div>
+          <p>
+            The gap between memory bandwidth and compute throughput continues to grow. On modern GPUs, 
+            a single arithmetic operation can be <strong>100-1000x faster</strong> than a global memory access. 
+            This is why memory optimization is so critical.
+          </p>
+        </div>
+
+        <!-- Hierarchy Overview -->
+        <h2 id="hierarchy-overview">2. The CUDA Memory Hierarchy Overview</h2>
+        
+        <p>
+          CUDA provides a hierarchical memory system with different characteristics for speed, size, and scope. 
+          Here's a visualization of the complete hierarchy:
+        </p>
+
+        <!-- Memory Hierarchy Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">CUDA Memory Hierarchy</div>
+          <svg class="memory-hierarchy-svg" viewBox="0 0 500 370">
+            <!-- Background layers -->
+            <defs>
+              <linearGradient id="regGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.2" />
+                <stop offset="100%" style="stop-color:#34d399;stop-opacity:0.2" />
+              </linearGradient>
+              <linearGradient id="sharedGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.2" />
+                <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:0.2" />
+              </linearGradient>
+              <linearGradient id="l2Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.2" />
+                <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:0.2" />
+              </linearGradient>
+              <linearGradient id="globalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.2" />
+                <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:0.2" />
+              </linearGradient>
+            </defs>
+            
+            <!-- Thread level - Registers -->
+            <rect x="50" y="20" width="400" height="60" rx="8" fill="url(#regGrad)" stroke="#10b981" stroke-width="2"/>
+            <text x="250" y="42" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#10b981">REGISTERS</text>
+            <text x="250" y="62" text-anchor="middle" font-family="Space Grotesk" font-size="11" fill="#64748b">Per-thread • ~256KB total per SM • ~1 cycle latency</text>
+            
+            <!-- Arrow down -->
+            <path d="M 250 85 L 250 105" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+            
+            <!-- Block level - Shared Memory -->
+            <rect x="50" y="110" width="400" height="60" rx="8" fill="url(#sharedGrad)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="250" y="132" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#3b82f6">SHARED MEMORY / L1 CACHE</text>
+            <text x="250" y="152" text-anchor="middle" font-family="Space Grotesk" font-size="11" fill="#64748b">Per-block • Up to 164KB per SM • ~20-30 cycles latency</text>
+            
+            <!-- Arrow down -->
+            <path d="M 250 175 L 250 195" stroke="#94a3b8" stroke-width="2"/>
+            
+            <!-- L2 Cache -->
+            <rect x="50" y="200" width="400" height="60" rx="8" fill="url(#l2Grad)" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="250" y="222" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#8b5cf6">L2 CACHE</text>
+            <text x="250" y="242" text-anchor="middle" font-family="Space Grotesk" font-size="11" fill="#64748b">Device-wide • 40-80MB • ~200 cycles latency</text>
+            
+            <!-- Arrow down -->
+            <path d="M 250 265 L 250 285" stroke="#94a3b8" stroke-width="2"/>
+            
+            <!-- Global Memory (HBM) -->
+            <rect x="50" y="290" width="400" height="60" rx="8" fill="url(#globalGrad)" stroke="#f59e0b" stroke-width="2"/>
+            <text x="250" y="312" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#f59e0b">GLOBAL MEMORY (HBM/GDDR)</text>
+            <text x="250" y="332" text-anchor="middle" font-family="Space Grotesk" font-size="11" fill="#64748b">Device-wide • 16-80GB • ~400-800 cycles latency</text>
+            
+            <!-- Bandwidth labels on right side -->
+            <text x="470" y="50" text-anchor="start" font-size="10" fill="#10b981" font-weight="600">~19 TB/s</text>
+            <text x="470" y="140" text-anchor="start" font-size="10" fill="#3b82f6" font-weight="600">~12 TB/s</text>
+            <text x="470" y="230" text-anchor="start" font-size="10" fill="#8b5cf6" font-weight="600">~5 TB/s</text>
+            <text x="470" y="320" text-anchor="start" font-size="10" fill="#f59e0b" font-weight="600">~2 TB/s</text>
+            
+            <!-- Speed/Size labels -->
+            <text x="30" y="150" text-anchor="middle" font-size="11" fill="#64748b" transform="rotate(-90, 30, 150)">← Faster, Smaller</text>
+            <text x="30" y="280" text-anchor="middle" font-size="11" fill="#64748b" transform="rotate(-90, 30, 280)">Slower, Larger →</text>
+            
+            <!-- Arrowhead marker -->
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="diagram-caption">Figure 1: The CUDA memory hierarchy showing the trade-off between speed, size, and scope. Bandwidth values are approximate for NVIDIA A100.</p>
+        </div>
+
+        <p>Let's look at the key characteristics of each memory type:</p>
+
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Memory Type</th>
+              <th>Scope</th>
+              <th>Size</th>
+              <th>Latency</th>
+              <th>Bandwidth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Registers</strong></td>
+              <td>Thread</td>
+              <td>~255 per thread</td>
+              <td>1 cycle</td>
+              <td>~19 TB/s</td>
+            </tr>
+            <tr>
+              <td><strong>Shared Memory</strong></td>
+              <td>Block</td>
+              <td>Up to 164KB</td>
+              <td>~20-30 cycles</td>
+              <td>~12 TB/s</td>
+            </tr>
+            <tr>
+              <td><strong>L2 Cache</strong></td>
+              <td>Device</td>
+              <td>40-80MB</td>
+              <td>~200 cycles</td>
+              <td>~5 TB/s</td>
+            </tr>
+            <tr>
+              <td><strong>Global Memory</strong></td>
+              <td>Device</td>
+              <td>16-80GB</td>
+              <td>~400-800 cycles</td>
+              <td>~2 TB/s</td>
+            </tr>
+            <tr>
+              <td><strong>Constant Memory</strong></td>
+              <td>Device (cached)</td>
+              <td>64KB</td>
+              <td>~100 cycles (cached)</td>
+              <td>Broadcast efficient</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Registers Section -->
+        <h2 id="registers">3. Registers: The Fastest Memory</h2>
+        
+        <p>
+          Registers are the fastest memory available on a GPU. Each thread has exclusive access to its own registers, 
+          and accessing them takes only a single clock cycle. However, registers are a precious resource—using too many 
+          per thread reduces the number of concurrent threads (occupancy).
+        </p>
+
+        <h3>How Registers Work</h3>
+        
+        <p>
+          Local variables in your kernel code typically reside in registers. The compiler decides register allocation, 
+          but you can influence it through code structure.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">register_example.cu</span>
+          </div>
+          <pre><code><span class="keyword">__global__</span> <span class="type">void</span> <span class="function">vectorAdd</span>(<span class="type">float</span>* a, <span class="type">float</span>* b, <span class="type">float</span>* c, <span class="type">int</span> n) {
+    <span class="comment">// idx is stored in a register - very fast access</span>
+    <span class="type">int</span> idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    <span class="keyword">if</span> (idx < n) {
+        <span class="comment">// temp_a and temp_b are register variables</span>
+        <span class="type">float</span> temp_a = a[idx];  <span class="comment">// Load from global memory to register</span>
+        <span class="type">float</span> temp_b = b[idx];  <span class="comment">// Load from global memory to register</span>
+        
+        <span class="comment">// Computation happens entirely in registers</span>
+        <span class="type">float</span> result = temp_a + temp_b;
+        
+        c[idx] = result;  <span class="comment">// Store from register to global memory</span>
+    }
+}</code></pre>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> Pro Tip</div>
+          <p>
+            Use <code>nvcc --ptxas-options=-v</code> to see register usage per kernel. If a kernel uses more than 
+            32 registers per thread, consider reducing complexity or using <code>__launch_bounds__</code> to control allocation.
+          </p>
+        </div>
+
+        <h3>Register Spilling</h3>
+        
+        <p>
+          When a kernel uses too many registers, the compiler "spills" some to local memory (which is actually in global 
+          memory, just thread-private). This can devastate performance.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">avoid_spilling.cu</span>
+          </div>
+          <pre><code><span class="comment">// Bad: Large arrays cause register spilling</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">badKernel</span>() {
+    <span class="type">float</span> data[<span class="number">64</span>];  <span class="comment">// Too large! Will spill to local memory</span>
+    <span class="comment">// ...</span>
+}
+
+<span class="comment">// Better: Use shared memory for larger working sets</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">betterKernel</span>() {
+    <span class="keyword">__shared__</span> <span class="type">float</span> sharedData[<span class="number">64</span>];  <span class="comment">// Block-shared, no spilling</span>
+    <span class="type">float</span> myValue;  <span class="comment">// Single register variable</span>
+    <span class="comment">// ...</span>
+}</code></pre>
+        </div>
+
+        <!-- Shared Memory Section -->
+        <h2 id="shared-memory">4. Shared Memory: The Programmable Cache</h2>
+        
+        <p>
+          Shared memory is the secret weapon of GPU optimization. It's an on-chip memory that's shared among all 
+          threads in a block, with roughly <strong>10-20x lower latency</strong> than global memory and much higher bandwidth.
+        </p>
+
+        <p>
+          Think of shared memory as a programmer-managed L1 cache. Unlike automatic caches, <strong>you</strong> decide 
+          exactly what data gets stored there and when.
+        </p>
+
+        <!-- Shared Memory Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Shared Memory Architecture</div>
+          <svg class="memory-hierarchy-svg" viewBox="0 0 500 300">
+            <!-- SM Container -->
+            <rect x="30" y="20" width="440" height="260" rx="12" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="8"/>
+            <text x="250" y="45" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#64748b">Streaming Multiprocessor (SM)</text>
+            
+            <!-- Shared Memory Bank -->
+            <rect x="60" y="60" width="380" height="80" rx="8" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="250" y="85" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#3b82f6">Shared Memory (32 Banks)</text>
+            
+            <!-- Memory Banks -->
+            <g>
+              <rect x="80" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="90" y="120" text-anchor="middle" font-size="8" fill="white">B0</text>
+              <rect x="105" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="115" y="120" text-anchor="middle" font-size="8" fill="white">B1</text>
+              <rect x="130" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="140" y="120" text-anchor="middle" font-size="8" fill="white">B2</text>
+              <rect x="155" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="165" y="120" text-anchor="middle" font-size="8" fill="white">B3</text>
+              <text x="195" y="120" font-size="12" fill="#3b82f6">...</text>
+              <rect x="215" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="225" y="120" text-anchor="middle" font-size="8" fill="white">B28</text>
+              <rect x="240" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="250" y="120" text-anchor="middle" font-size="8" fill="white">B29</text>
+              <rect x="265" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="275" y="120" text-anchor="middle" font-size="8" fill="white">B30</text>
+              <rect x="290" y="100" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.6"/>
+              <text x="300" y="120" text-anchor="middle" font-size="8" fill="white">B31</text>
+            </g>
+            
+            <!-- Thread Warp -->
+            <rect x="60" y="165" width="380" height="100" rx="8" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="2"/>
+            <text x="250" y="190" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#10b981">Warp (32 Threads)</text>
+            
+            <!-- Threads -->
+            <g>
+              <circle cx="90" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="90" y="234" text-anchor="middle" font-size="8" fill="white">T0</text>
+              <circle cx="120" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="120" y="234" text-anchor="middle" font-size="8" fill="white">T1</text>
+              <circle cx="150" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="150" y="234" text-anchor="middle" font-size="8" fill="white">T2</text>
+              <circle cx="180" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="180" y="234" text-anchor="middle" font-size="8" fill="white">T3</text>
+              <text x="210" y="234" font-size="12" fill="#10b981">...</text>
+              <circle cx="240" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="240" y="234" text-anchor="middle" font-size="8" fill="white">T28</text>
+              <circle cx="270" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="270" y="234" text-anchor="middle" font-size="8" fill="white">T29</text>
+              <circle cx="300" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="300" y="234" text-anchor="middle" font-size="8" fill="white">T30</text>
+              <circle cx="330" cy="230" r="12" fill="#10b981" opacity="0.6"/>
+              <text x="330" y="234" text-anchor="middle" font-size="8" fill="white">T31</text>
+            </g>
+            
+            <!-- Connection lines (conflict-free access) -->
+            <line x1="90" y1="130" x2="90" y2="218" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4"/>
+            <line x1="115" y1="130" x2="120" y2="218" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4"/>
+            <line x1="140" y1="130" x2="150" y2="218" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4"/>
+            <line x1="165" y1="130" x2="180" y2="218" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4"/>
+            
+            <!-- Bank conflict indicator -->
+            <rect x="350" y="80" width="80" height="50" rx="6" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="390" y="100" text-anchor="middle" font-size="9" fill="#ef4444" font-weight="600">Bank</text>
+            <text x="390" y="115" text-anchor="middle" font-size="9" fill="#ef4444" font-weight="600">Conflict!</text>
+          </svg>
+          <p class="diagram-caption">Figure 2: Shared memory is organized into 32 banks. When threads access different banks, accesses happen in parallel. Conflicts serialize access.</p>
+        </div>
+
+        <h3>Basic Shared Memory Usage</h3>
+        
+        <p>
+          The most common use of shared memory is to cache data from global memory that will be accessed multiple times.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">shared_memory_basic.cu</span>
+          </div>
+          <pre><code><span class="directive">#define</span> BLOCK_SIZE <span class="number">256</span>
+
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">reductionSum</span>(<span class="type">float</span>* input, <span class="type">float</span>* output, <span class="type">int</span> n) {
+    <span class="comment">// Declare shared memory for the block</span>
+    <span class="keyword">__shared__</span> <span class="type">float</span> sdata[BLOCK_SIZE];
+    
+    <span class="type">unsigned int</span> tid = threadIdx.x;
+    <span class="type">unsigned int</span> idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    <span class="comment">// Load from global memory to shared memory</span>
+    sdata[tid] = (idx < n) ? input[idx] : <span class="number">0.0f</span>;
+    <span class="function">__syncthreads</span>();  <span class="comment">// Ensure all threads have loaded</span>
+    
+    <span class="comment">// Parallel reduction in shared memory</span>
+    <span class="keyword">for</span> (<span class="type">unsigned int</span> s = blockDim.x / <span class="number">2</span>; s > <span class="number">0</span>; s >>= <span class="number">1</span>) {
+        <span class="keyword">if</span> (tid < s) {
+            sdata[tid] += sdata[tid + s];
+        }
+        <span class="function">__syncthreads</span>();  <span class="comment">// Sync after each reduction step</span>
+    }
+    
+    <span class="comment">// Thread 0 writes the result for this block</span>
+    <span class="keyword">if</span> (tid == <span class="number">0</span>) {
+        output[blockIdx.x] = sdata[<span class="number">0</span>];
+    }
+}</code></pre>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Don't Forget __syncthreads()</div>
+          <p>
+            Always use <code>__syncthreads()</code> after writing to shared memory and before reading from locations 
+            written by other threads. Missing synchronization causes race conditions that may work sometimes 
+            but fail unpredictably.
+          </p>
+        </div>
+
+        <h3>Bank Conflicts</h3>
+        
+        <p>
+          Shared memory is divided into 32 banks (on modern GPUs). When multiple threads in a warp access 
+          <strong>different addresses in the same bank</strong>, accesses are serialized—this is called a bank conflict.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">bank_conflicts.cu</span>
+          </div>
+          <pre><code><span class="keyword">__shared__</span> <span class="type">float</span> data[<span class="number">1024</span>];
+
+<span class="comment">// Good: Stride-1 access, no bank conflicts</span>
+<span class="comment">// Thread i accesses bank i % 32</span>
+<span class="type">float</span> val = data[threadIdx.x];  <span class="comment">// ✓ Conflict-free</span>
+
+<span class="comment">// Bad: Stride-32 access, maximum bank conflicts!</span>
+<span class="comment">// All threads access bank 0</span>
+<span class="type">float</span> val = data[threadIdx.x * <span class="number">32</span>];  <span class="comment">// ✗ 32-way conflict</span>
+
+<span class="comment">// Solution: Add padding to avoid conflicts</span>
+<span class="keyword">__shared__</span> <span class="type">float</span> data_padded[<span class="number">32</span>][<span class="number">33</span>];  <span class="comment">// 33 instead of 32!</span>
+<span class="type">float</span> val = data_padded[threadIdx.y][threadIdx.x];  <span class="comment">// ✓ Conflict-free</span></code></pre>
+        </div>
+
+        <!-- Global Memory Section -->
+        <h2 id="global-memory">5. Global Memory: The Main Workhorse</h2>
+        
+        <p>
+          Global memory is where your data lives. It's the largest memory space (tens of GBs on modern GPUs) 
+          but also the slowest. The key to fast global memory access is <strong>coalescing</strong>—combining 
+          memory accesses from multiple threads into fewer, larger transactions.
+        </p>
+
+        <!-- Coalescing Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Memory Coalescing</div>
+          <svg class="memory-hierarchy-svg" viewBox="0 0 500 280">
+            <!-- Good coalescing -->
+            <text x="130" y="25" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#10b981">✓ Coalesced Access</text>
+            
+            <!-- Memory segment -->
+            <rect x="30" y="35" width="200" height="40" rx="6" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="2"/>
+            <text x="130" y="60" text-anchor="middle" font-size="11" fill="#f59e0b">128-byte Memory Segment</text>
+            
+            <!-- Individual memory boxes -->
+            <g>
+              <rect x="35" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="60" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="85" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="110" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="135" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="160" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="185" y="80" width="22" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+              <rect x="210" y="80" width="17" height="25" rx="3" fill="#f59e0b" opacity="0.5"/>
+            </g>
+            
+            <!-- Threads accessing -->
+            <g>
+              <circle cx="46" cy="140" r="10" fill="#10b981"/>
+              <text x="46" y="144" text-anchor="middle" font-size="7" fill="white">T0</text>
+              <circle cx="71" cy="140" r="10" fill="#10b981"/>
+              <text x="71" y="144" text-anchor="middle" font-size="7" fill="white">T1</text>
+              <circle cx="96" cy="140" r="10" fill="#10b981"/>
+              <text x="96" y="144" text-anchor="middle" font-size="7" fill="white">T2</text>
+              <circle cx="121" cy="140" r="10" fill="#10b981"/>
+              <text x="121" y="144" text-anchor="middle" font-size="7" fill="white">T3</text>
+              <circle cx="146" cy="140" r="10" fill="#10b981"/>
+              <text x="146" y="144" text-anchor="middle" font-size="7" fill="white">T4</text>
+              <circle cx="171" cy="140" r="10" fill="#10b981"/>
+              <text x="171" y="144" text-anchor="middle" font-size="7" fill="white">T5</text>
+              <circle cx="196" cy="140" r="10" fill="#10b981"/>
+              <text x="196" y="144" text-anchor="middle" font-size="7" fill="white">T6</text>
+              <circle cx="218" cy="140" r="10" fill="#10b981"/>
+              <text x="218" y="144" text-anchor="middle" font-size="7" fill="white">T7</text>
+            </g>
+            
+            <!-- Arrows (aligned) -->
+            <line x1="46" y1="105" x2="46" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="71" y1="105" x2="71" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="96" y1="105" x2="96" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="121" y1="105" x2="121" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="146" y1="105" x2="146" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="171" y1="105" x2="171" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="196" y1="105" x2="196" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="218" y1="105" x2="218" y2="128" stroke="#10b981" stroke-width="1.5"/>
+            
+            <text x="130" y="170" text-anchor="middle" font-size="10" fill="#10b981">1 Memory Transaction</text>
+            
+            <!-- Bad coalescing -->
+            <text x="370" y="25" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#ef4444">✗ Non-Coalesced Access</text>
+            
+            <!-- Multiple memory segments -->
+            <rect x="270" y="35" width="70" height="30" rx="4" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="1.5"/>
+            <rect x="350" y="35" width="70" height="30" rx="4" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="1.5"/>
+            <rect x="430" y="35" width="50" height="30" rx="4" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="1.5"/>
+            
+            <!-- Scattered memory boxes -->
+            <rect x="275" y="80" width="15" height="20" rx="2" fill="#f59e0b" opacity="0.5"/>
+            <rect x="320" y="80" width="15" height="20" rx="2" fill="#f59e0b" opacity="0.5"/>
+            <rect x="360" y="80" width="15" height="20" rx="2" fill="#f59e0b" opacity="0.5"/>
+            <rect x="400" y="80" width="15" height="20" rx="2" fill="#f59e0b" opacity="0.5"/>
+            <rect x="440" y="80" width="15" height="20" rx="2" fill="#f59e0b" opacity="0.5"/>
+            
+            <!-- Threads accessing scattered -->
+            <g>
+              <circle cx="283" cy="140" r="10" fill="#ef4444"/>
+              <text x="283" y="144" text-anchor="middle" font-size="7" fill="white">T0</text>
+              <circle cx="328" cy="140" r="10" fill="#ef4444"/>
+              <text x="328" y="144" text-anchor="middle" font-size="7" fill="white">T1</text>
+              <circle cx="368" cy="140" r="10" fill="#ef4444"/>
+              <text x="368" y="144" text-anchor="middle" font-size="7" fill="white">T2</text>
+              <circle cx="408" cy="140" r="10" fill="#ef4444"/>
+              <text x="408" y="144" text-anchor="middle" font-size="7" fill="white">T3</text>
+              <circle cx="448" cy="140" r="10" fill="#ef4444"/>
+              <text x="448" y="144" text-anchor="middle" font-size="7" fill="white">T4</text>
+            </g>
+            
+            <!-- Scattered arrows -->
+            <line x1="283" y1="100" x2="283" y2="128" stroke="#ef4444" stroke-width="1.5"/>
+            <line x1="328" y1="100" x2="328" y2="128" stroke="#ef4444" stroke-width="1.5"/>
+            <line x1="368" y1="100" x2="368" y2="128" stroke="#ef4444" stroke-width="1.5"/>
+            <line x1="408" y1="100" x2="408" y2="128" stroke="#ef4444" stroke-width="1.5"/>
+            <line x1="448" y1="100" x2="448" y2="128" stroke="#ef4444" stroke-width="1.5"/>
+            
+            <text x="370" y="170" text-anchor="middle" font-size="10" fill="#ef4444">5+ Memory Transactions</text>
+            
+            <!-- Performance comparison -->
+            <rect x="50" y="200" width="160" height="60" rx="8" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="1.5"/>
+            <text x="130" y="225" text-anchor="middle" font-size="11" fill="#10b981" font-weight="600">~2000 GB/s</text>
+            <text x="130" y="245" text-anchor="middle" font-size="10" fill="#64748b">Full bandwidth utilization</text>
+            
+            <rect x="290" y="200" width="160" height="60" rx="8" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="370" y="225" text-anchor="middle" font-size="11" fill="#ef4444" font-weight="600">~200-400 GB/s</text>
+            <text x="370" y="245" text-anchor="middle" font-size="10" fill="#64748b">5-10x bandwidth loss</text>
+          </svg>
+          <p class="diagram-caption">Figure 3: Coalesced access combines thread requests into minimal memory transactions. Scattered access requires multiple transactions, wasting bandwidth.</p>
+        </div>
+
+        <h3>Achieving Coalesced Access</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">coalescing_patterns.cu</span>
+          </div>
+          <pre><code><span class="comment">// ✓ Good: Coalesced access - adjacent threads access adjacent memory</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">coalescedAccess</span>(<span class="type">float</span>* data, <span class="type">int</span> n) {
+    <span class="type">int</span> idx = blockIdx.x * blockDim.x + threadIdx.x;
+    <span class="keyword">if</span> (idx < n) {
+        <span class="type">float</span> val = data[idx];  <span class="comment">// Thread 0 → data[0], Thread 1 → data[1], ...</span>
+    }
+}
+
+<span class="comment">// ✗ Bad: Strided access - threads skip memory locations</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">stridedAccess</span>(<span class="type">float</span>* data, <span class="type">int</span> n, <span class="type">int</span> stride) {
+    <span class="type">int</span> idx = blockIdx.x * blockDim.x + threadIdx.x;
+    <span class="keyword">if</span> (idx * stride < n) {
+        <span class="type">float</span> val = data[idx * stride];  <span class="comment">// Scattered access!</span>
+    }
+}
+
+<span class="comment">// Structure of Arrays (SoA) vs Array of Structures (AoS)</span>
+
+<span class="comment">// ✗ AoS: Poor coalescing</span>
+<span class="keyword">struct</span> <span class="type">ParticleAoS</span> {
+    <span class="type">float</span> x, y, z;
+    <span class="type">float</span> vx, vy, vz;
+};
+<span class="comment">// ParticleAoS particles[N]; → Accessing x values is strided</span>
+
+<span class="comment">// ✓ SoA: Perfect coalescing</span>
+<span class="keyword">struct</span> <span class="type">ParticlesSoA</span> {
+    <span class="type">float</span>* x;   <span class="comment">// All x values contiguous</span>
+    <span class="type">float</span>* y;   <span class="comment">// All y values contiguous</span>
+    <span class="type">float</span>* z;
+    <span class="type">float</span>* vx;
+    <span class="type">float</span>* vy;
+    <span class="type">float</span>* vz;
+};
+<span class="comment">// Access particles.x[idx] → Coalesced!</span></code></pre>
+        </div>
+
+        <!-- Constant & Texture Memory -->
+        <h2 id="constant-texture">6. Constant & Texture Memory</h2>
+        
+        <p>
+          CUDA provides two additional memory types optimized for specific access patterns:
+        </p>
+
+        <h3>Constant Memory</h3>
+        
+        <p>
+          Constant memory is ideal for read-only data that's accessed uniformly by all threads.
+          It has a dedicated cache that can <strong>broadcast a single value to all threads</strong> in a warp
+          in one cycle.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">constant_memory.cu</span>
+          </div>
+          <pre><code><span class="comment">// Declare constant memory (limited to 64KB)</span>
+<span class="keyword">__constant__</span> <span class="type">float</span> filterKernel[<span class="number">25</span>];  <span class="comment">// 5x5 convolution kernel</span>
+<span class="keyword">__constant__</span> <span class="type">float</span> transformMatrix[<span class="number">16</span>];  <span class="comment">// 4x4 matrix</span>
+
+<span class="comment">// Copy to constant memory from host</span>
+<span class="type">void</span> <span class="function">setupConstants</span>(<span class="type">float</span>* h_kernel, <span class="type">float</span>* h_matrix) {
+    <span class="function">cudaMemcpyToSymbol</span>(filterKernel, h_kernel, <span class="number">25</span> * <span class="keyword">sizeof</span>(<span class="type">float</span>));
+    <span class="function">cudaMemcpyToSymbol</span>(transformMatrix, h_matrix, <span class="number">16</span> * <span class="keyword">sizeof</span>(<span class="type">float</span>));
+}
+
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">convolution</span>(<span class="type">float</span>* input, <span class="type">float</span>* output, <span class="type">int</span> width) {
+    <span class="comment">// All threads read the same kernel value → broadcast is efficient</span>
+    <span class="type">float</span> sum = <span class="number">0.0f</span>;
+    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i < <span class="number">25</span>; i++) {
+        sum += input[...] * filterKernel[i];  <span class="comment">// Cached broadcast</span>
+    }
+    output[...] = sum;
+}</code></pre>
+        </div>
+
+        <h3>Texture Memory</h3>
+        
+        <p>
+          Texture memory provides hardware interpolation, boundary handling, and is optimized for 
+          <strong>2D spatial locality</strong>. It's particularly useful for image processing.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">texture_memory.cu</span>
+          </div>
+          <pre><code><span class="comment">// Modern CUDA texture objects (preferred)</span>
+cudaTextureObject_t texObj;
+
+<span class="type">void</span> <span class="function">createTexture</span>(<span class="type">float</span>* d_data, <span class="type">int</span> width, <span class="type">int</span> height) {
+    <span class="comment">// Create channel descriptor</span>
+    cudaChannelFormatDesc channelDesc = 
+        <span class="function">cudaCreateChannelDesc</span><<span class="type">float</span>>();
+    
+    <span class="comment">// Create CUDA array</span>
+    cudaArray_t cuArray;
+    <span class="function">cudaMallocArray</span>(&cuArray, &channelDesc, width, height);
+    <span class="function">cudaMemcpy2DToArray</span>(cuArray, <span class="number">0</span>, <span class="number">0</span>, d_data, 
+                         width * <span class="keyword">sizeof</span>(<span class="type">float</span>), 
+                         width * <span class="keyword">sizeof</span>(<span class="type">float</span>), height,
+                         cudaMemcpyDeviceToDevice);
+    
+    <span class="comment">// Setup texture parameters</span>
+    cudaResourceDesc resDesc = {};
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = cuArray;
+    
+    cudaTextureDesc texDesc = {};
+    texDesc.addressMode[<span class="number">0</span>] = cudaAddressModeClamp;  <span class="comment">// Clamp at edges</span>
+    texDesc.addressMode[<span class="number">1</span>] = cudaAddressModeClamp;
+    texDesc.filterMode = cudaFilterModeLinear;     <span class="comment">// Bilinear interpolation</span>
+    texDesc.normalizedCoords = <span class="keyword">true</span>;
+    
+    <span class="function">cudaCreateTextureObject</span>(&texObj, &resDesc, &texDesc, <span class="keyword">nullptr</span>);
+}
+
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">sampleTexture</span>(cudaTextureObject_t tex, <span class="type">float</span>* output) {
+    <span class="type">float</span> u = threadIdx.x / (<span class="type">float</span>)blockDim.x;
+    <span class="type">float</span> v = threadIdx.y / (<span class="type">float</span>)blockDim.y;
+    
+    <span class="comment">// Hardware-accelerated bilinear interpolation!</span>
+    output[...] = <span class="function">tex2D</span><<span class="type">float</span>>(tex, u, v);
+}</code></pre>
+        </div>
+
+        <!-- Optimization Section -->
+        <h2 id="optimization">7. Practical Optimization Techniques</h2>
+        
+        <p>
+          Let's put it all together with a real-world example: optimizing matrix multiplication.
+        </p>
+
+        <h3>Naive Implementation</h3>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">matmul_naive.cu</span>
+          </div>
+          <pre><code><span class="comment">// Naive matrix multiplication - poor memory access pattern</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">matmulNaive</span>(<span class="type">float</span>* A, <span class="type">float</span>* B, <span class="type">float</span>* C, <span class="type">int</span> N) {
+    <span class="type">int</span> row = blockIdx.y * blockDim.y + threadIdx.y;
+    <span class="type">int</span> col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    <span class="keyword">if</span> (row < N && col < N) {
+        <span class="type">float</span> sum = <span class="number">0.0f</span>;
+        <span class="keyword">for</span> (<span class="type">int</span> k = <span class="number">0</span>; k < N; k++) {
+            <span class="comment">// Each thread reads N elements from A and N from B</span>
+            <span class="comment">// A is accessed with stride N (non-coalesced)</span>
+            <span class="comment">// B is accessed with stride 1 (coalesced)</span>
+            sum += A[row * N + k] * B[k * N + col];
+        }
+        C[row * N + col] = sum;
+    }
+}
+<span class="comment">// Performance: ~200-400 GFLOPS on A100</span></code></pre>
+        </div>
+
+        <h3>Optimized with Shared Memory Tiling</h3>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">matmul_tiled.cu</span>
+          </div>
+          <pre><code><span class="directive">#define</span> TILE_SIZE <span class="number">32</span>
+
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">matmulTiled</span>(<span class="type">float</span>* A, <span class="type">float</span>* B, <span class="type">float</span>* C, <span class="type">int</span> N) {
+    <span class="comment">// Shared memory tiles for A and B</span>
+    <span class="keyword">__shared__</span> <span class="type">float</span> As[TILE_SIZE][TILE_SIZE];
+    <span class="keyword">__shared__</span> <span class="type">float</span> Bs[TILE_SIZE][TILE_SIZE];
+    
+    <span class="type">int</span> bx = blockIdx.x, by = blockIdx.y;
+    <span class="type">int</span> tx = threadIdx.x, ty = threadIdx.y;
+    
+    <span class="type">int</span> row = by * TILE_SIZE + ty;
+    <span class="type">int</span> col = bx * TILE_SIZE + tx;
+    
+    <span class="type">float</span> sum = <span class="number">0.0f</span>;
+    
+    <span class="comment">// Loop over tiles</span>
+    <span class="keyword">for</span> (<span class="type">int</span> t = <span class="number">0</span>; t < (N + TILE_SIZE - <span class="number">1</span>) / TILE_SIZE; t++) {
+        <span class="comment">// Collaborative loading: each thread loads one element</span>
+        <span class="type">int</span> aCol = t * TILE_SIZE + tx;
+        <span class="type">int</span> bRow = t * TILE_SIZE + ty;
+        
+        As[ty][tx] = (row < N && aCol < N) ? A[row * N + aCol] : <span class="number">0.0f</span>;
+        Bs[ty][tx] = (bRow < N && col < N) ? B[bRow * N + col] : <span class="number">0.0f</span>;
+        
+        <span class="function">__syncthreads</span>();
+        
+        <span class="comment">// Compute partial dot product using shared memory</span>
+        <span class="directive">#pragma unroll</span>
+        <span class="keyword">for</span> (<span class="type">int</span> k = <span class="number">0</span>; k < TILE_SIZE; k++) {
+            sum += As[ty][k] * Bs[k][tx];  <span class="comment">// Fast shared memory access!</span>
+        }
+        
+        <span class="function">__syncthreads</span>();
+    }
+    
+    <span class="keyword">if</span> (row < N && col < N) {
+        C[row * N + col] = sum;
+    }
+}
+<span class="comment">// Performance: ~2000-5000 GFLOPS on A100 (10-20x improvement!)</span></code></pre>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-rocket"></i> Performance Impact</div>
+          <p>
+            The tiled version reduces global memory accesses by a factor of <strong>TILE_SIZE</strong>. 
+            Instead of reading N elements per output element, we read N/TILE_SIZE tiles, reusing each 
+            element TILE_SIZE times from shared memory.
+          </p>
+        </div>
+
+        <!-- Summary -->
+        <h2 id="summary">8. Summary & Best Practices</h2>
+        
+        <p>Here are the key takeaways for optimizing CUDA memory access:</p>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-clipboard-check"></i> Memory Optimization Checklist</div>
+          <p></p>
+          <ul>
+            <li><strong>Minimize global memory access</strong> - Use shared memory to cache repeatedly accessed data</li>
+            <li><strong>Coalesce memory access</strong> - Ensure adjacent threads access adjacent memory locations</li>
+            <li><strong>Avoid bank conflicts</strong> - Use padding when accessing shared memory with strides</li>
+            <li><strong>Use Structure of Arrays (SoA)</strong> - Better coalescing than Array of Structures</li>
+            <li><strong>Leverage constant memory</strong> - For read-only data broadcast to all threads</li>
+            <li><strong>Profile with Nsight</strong> - Use tools to identify memory bottlenecks</li>
+            <li><strong>Watch register usage</strong> - Avoid spilling to local memory</li>
+          </ul>
+        </div>
+
+        <p>
+          Understanding memory hierarchy is fundamental to GPU programming. While modern GPUs have incredible 
+          compute power, the memory subsystem is almost always the bottleneck. By carefully managing data 
+          placement and access patterns, you can often achieve <strong>10-100x speedups</strong> over naive implementations.
+        </p>
+
+        <p>
+          In the next post, we'll explore <strong>CUDA profiling with Nsight Compute</strong> and learn how to 
+          identify and fix memory bottlenecks in real-world applications.
+        </p>
+
+        <!-- Tags -->
+        <div class="post-tags">
+          <span class="post-tag">CUDA</span>
+          <span class="post-tag">GPU Programming</span>
+          <span class="post-tag">Memory Optimization</span>
+          <span class="post-tag">HPC</span>
+          <span class="post-tag">Performance</span>
+          <span class="post-tag">Shared Memory</span>
+        </div>
+
+        <!-- Author Card -->
+        <div class="author-card">
+          <div class="author-avatar">AO</div>
+          <div class="author-info">
+            <h4>Alireza Olama</h4>
+            <p>Postdoctoral Researcher at Åbo Akademi University, specializing in distributed machine learning systems, GPU programming, and HPC optimization.</p>
+            <div class="author-links">
+              <a href="https://github.com/alirezalm" target="_blank"><i class="fab fa-github"></i></a>
+              <a href="https://scholar.google.com/citations?user=km4oc50AAAAJ" target="_blank"><i class="fas fa-graduation-cap"></i></a>
+              <a href="https://linkedin.com/in/alirezalm" target="_blank"><i class="fab fa-linkedin"></i></a>
+              <a href="https://twitter.com/alirezalm" target="_blank"><i class="fab fa-twitter"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="post-footer-nav">
+          <a href="../blog.html"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+          <a href="pytorch-ddp-vs-fsdp.html">Next: PyTorch DDP vs FSDP <i class="fas fa-arrow-right"></i></a>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- Footer -->
+    <footer style="background: var(--surface); padding: 40px 24px; text-align: center; border-top: 1px solid var(--highlight);">
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        © 2026 Alireza Olama. All rights reserved. 
+        <a href="../index.html" style="color: var(--accent);">Home</a> · 
+        <a href="../blog.html" style="color: var(--accent);">Blog</a>
+      </p>
+    </footer>
+
+    <script>
+      // Theme toggle functionality
+      function toggleTheme() {
+        const body = document.body;
+        const icon = document.querySelector('.theme-toggle i');
+        body.classList.toggle('dark-mode');
+        
+        if (body.classList.contains('dark-mode')) {
+          icon.classList.remove('fa-moon');
+          icon.classList.add('fa-sun');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          icon.classList.remove('fa-sun');
+          icon.classList.add('fa-moon');
+          localStorage.setItem('theme', 'light');
+        }
+      }
+
+      // Check for saved theme preference
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const icon = document.querySelector('.theme-toggle i');
+        if (savedTheme === 'dark') {
+          document.body.classList.add('dark-mode');
+          if (icon) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+          }
+        }
+      })();
+
+      // Smooth scroll for TOC links
+      document.querySelectorAll('.toc a').forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

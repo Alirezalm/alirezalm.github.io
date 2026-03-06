@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyTorch DDP vs FSDP: When to Use Which | Alireza Olama</title>
+    <meta name="description" content="A comprehensive guide comparing PyTorch Distributed Data Parallel (DDP) and Fully Sharded Data Parallel (FSDP) for distributed training" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- Base styles -->
+    <link rel="stylesheet" href="../styles.css" />
+    
+    <style>
+      /* Post-specific styles */
+      .post-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 16px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      body.dark-mode .post-nav {
+        background: rgba(15, 23, 42, 0.95);
+      }
+      
+      .post-nav-links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      
+      .post-nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+      }
+      
+      .post-nav-links a:hover {
+        color: var(--accent);
+      }
+      
+      .post-hero {
+        padding: 140px 32px 60px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+        color: white;
+      }
+      
+      .post-hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
+      .post-category {
+        display: inline-block;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+      }
+      
+      .post-hero h1 {
+        font-family: 'Fraunces', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1.2;
+      }
+      
+      .post-hero .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.9;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      
+      .post-meta {
+        display: flex;
+        gap: 24px;
+        font-size: 0.9rem;
+        opacity: 0.85;
+      }
+      
+      .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .post-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 60px 32px;
+      }
+      
+      .post-content h2 {
+        font-family: 'Fraunces', serif;
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 48px 0 24px;
+        color: var(--text-primary);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 8px;
+      }
+      
+      .post-content h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 32px 0 16px;
+        color: var(--text-primary);
+      }
+      
+      .post-content p {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 20px;
+        color: var(--text-secondary);
+      }
+      
+      .post-content strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      
+      .post-content ul, .post-content ol {
+        margin: 20px 0;
+        padding-left: 24px;
+      }
+      
+      .post-content li {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+      }
+      
+      /* Table of Contents */
+      .toc {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px 32px;
+        margin-bottom: 40px;
+        border-left: 4px solid var(--accent);
+      }
+      
+      .toc-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+      }
+      
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .toc li {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+      
+      .toc a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      
+      .toc a:hover {
+        color: var(--accent);
+      }
+      
+      /* Code blocks */
+      .code-block {
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 24px 0;
+        overflow: hidden;
+      }
+      
+      .code-header {
+        background: #334155;
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .code-lang {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+      
+      .code-filename {
+        color: #60a5fa;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      
+      .code-block pre {
+        padding: 20px;
+        overflow-x: auto;
+        margin: 0;
+      }
+      
+      .code-block code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      
+      /* Syntax highlighting */
+      .keyword { color: #c792ea; }
+      .type { color: #82aaff; }
+      .function { color: #82aaff; }
+      .string { color: #c3e88d; }
+      .number { color: #f78c6c; }
+      .comment { color: #697098; font-style: italic; }
+      .decorator { color: #f78c6c; }
+      .param { color: #ffcb6b; }
+      .builtin { color: #89ddff; }
+      
+      /* Info boxes */
+      .info-box {
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
+      
+      .info-box-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .info-box p {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      
+      .info-box.note {
+        background: rgba(59, 130, 246, 0.1);
+        border-left: 4px solid #3b82f6;
+      }
+      
+      .info-box.note .info-box-title {
+        color: #3b82f6;
+      }
+      
+      .info-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 4px solid #f59e0b;
+      }
+      
+      .info-box.warning .info-box-title {
+        color: #f59e0b;
+      }
+      
+      .info-box.tip {
+        background: rgba(16, 185, 129, 0.1);
+        border-left: 4px solid #10b981;
+      }
+      
+      .info-box.tip .info-box-title {
+        color: #10b981;
+      }
+      
+      .info-box.ddp {
+        background: rgba(59, 130, 246, 0.1);
+        border-left: 4px solid #3b82f6;
+      }
+      
+      .info-box.ddp .info-box-title {
+        color: #3b82f6;
+      }
+      
+      .info-box.fsdp {
+        background: rgba(139, 92, 246, 0.1);
+        border-left: 4px solid #8b5cf6;
+      }
+      
+      .info-box.fsdp .info-box-title {
+        color: #8b5cf6;
+      }
+      
+      /* Diagrams */
+      .diagram-container {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 32px 0;
+        text-align: center;
+      }
+      
+      body.dark-mode .diagram-container {
+        background: rgba(30, 41, 59, 0.5);
+      }
+      
+      .diagram-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+      }
+      
+      .diagram-caption {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 16px;
+        font-style: italic;
+      }
+      
+      .comparison-svg {
+        width: 100%;
+        max-width: 700px;
+        height: auto;
+      }
+      
+      /* Comparison table */
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 0.95rem;
+      }
+      
+      .comparison-table th,
+      .comparison-table td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .comparison-table th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .comparison-table th:first-child {
+        border-top-left-radius: 8px;
+      }
+      
+      .comparison-table th:last-child {
+        border-top-right-radius: 8px;
+      }
+      
+      .comparison-table td {
+        color: var(--text-secondary);
+      }
+      
+      .comparison-table tr:hover td {
+        background: var(--bg-secondary);
+      }
+      
+      .comparison-table .ddp-col {
+        color: #3b82f6;
+        font-weight: 500;
+      }
+      
+      .comparison-table .fsdp-col {
+        color: #8b5cf6;
+        font-weight: 500;
+      }
+      
+      /* Decision Tree */
+      .decision-tree {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+        border-radius: 16px;
+        padding: 32px;
+        margin: 32px 0;
+        border: 1px solid var(--border);
+      }
+      
+      .decision-tree h4 {
+        font-size: 1.2rem;
+        margin-bottom: 24px;
+        color: var(--text-primary);
+        text-align: center;
+      }
+      
+      .decision-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: var(--bg-primary);
+        border-radius: 12px;
+        border-left: 4px solid var(--accent);
+      }
+      
+      .decision-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+      
+      .decision-content h5 {
+        font-size: 1rem;
+        margin-bottom: 6px;
+        color: var(--text-primary);
+      }
+      
+      .decision-content p {
+        font-size: 0.9rem;
+        margin: 0;
+        color: var(--text-secondary);
+      }
+      
+      .decision-item.ddp {
+        border-left-color: #3b82f6;
+      }
+      
+      .decision-item.fsdp {
+        border-left-color: #8b5cf6;
+      }
+      
+      .decision-item .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+      
+      .decision-item.ddp .badge {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+      }
+      
+      .decision-item.fsdp .badge {
+        background: rgba(139, 92, 246, 0.2);
+        color: #8b5cf6;
+      }
+      
+      /* Post footer */
+      .post-footer {
+        margin-top: 60px;
+        padding-top: 40px;
+        border-top: 1px solid var(--border);
+      }
+      
+      .author-card {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        padding: 24px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+      }
+      
+      .author-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), #6366f1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      
+      .author-info h4 {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+        color: var(--text-primary);
+      }
+      
+      .author-info p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+      
+      /* Post navigation */
+      .post-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 40px;
+        gap: 20px;
+      }
+      
+      .post-nav-link {
+        flex: 1;
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .post-nav-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      .post-nav-link .label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      
+      .post-nav-link .title {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .post-nav-link.next {
+        text-align: right;
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .post-hero {
+          padding: 120px 20px 40px;
+        }
+        
+        .post-meta {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        
+        .post-container {
+          padding: 40px 20px;
+        }
+        
+        .code-block pre {
+          padding: 16px;
+        }
+        
+        .code-block code {
+          font-size: 0.8rem;
+        }
+        
+        .comparison-table {
+          font-size: 0.85rem;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+          padding: 10px 12px;
+        }
+        
+        .decision-tree {
+          padding: 20px;
+        }
+        
+        .post-navigation {
+          flex-direction: column;
+        }
+        
+        .post-nav-link.next {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="post-nav">
+      <a href="../index.html" class="logo">AO</a>
+      <div class="post-nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../blog.html">Blog</a>
+        <a href="../index.html#research">Research</a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="post-hero">
+      <div class="post-hero-content">
+        <span class="post-category"><i class="fas fa-network-wired"></i> Distributed Training</span>
+        <h1>PyTorch DDP vs FSDP: When to Use Which</h1>
+        <p class="subtitle">A practical guide to choosing the right distributed training strategy for your deep learning workloads</p>
+        <div class="post-meta">
+          <span><i class="fas fa-user"></i> Alireza Olama</span>
+          <span><i class="fas fa-calendar"></i> March 6, 2026</span>
+          <span><i class="fas fa-clock"></i> 12 min read</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Article Content -->
+    <article class="post-container">
+      <div class="post-content">
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <div class="toc-title"><i class="fas fa-list"></i> Table of Contents</div>
+          <ol>
+            <li><a href="#introduction">Introduction: The Scaling Challenge</a></li>
+            <li><a href="#ddp-explained">DDP Explained: Data Parallelism</a></li>
+            <li><a href="#fsdp-explained">FSDP Explained: Sharding Everything</a></li>
+            <li><a href="#comparison">Head-to-Head Comparison</a></li>
+            <li><a href="#code-examples">Code Examples</a></li>
+            <li><a href="#decision-guide">Decision Guide: When to Use Which</a></li>
+            <li><a href="#migration">Migrating from DDP to FSDP</a></li>
+            <li><a href="#summary">Summary & Best Practices</a></li>
+          </ol>
+        </div>
+
+        <!-- Introduction -->
+        <h2 id="introduction">1. Introduction: The Scaling Challenge</h2>
+        
+        <p>
+          Training large models on a single GPU is increasingly becoming impossible. Whether it's a 7B parameter LLM 
+          or a large vision transformer, modern deep learning demands distributed training. PyTorch offers two main 
+          strategies: <strong>Distributed Data Parallel (DDP)</strong> and <strong>Fully Sharded Data Parallel (FSDP)</strong>.
+        </p>
+        
+        <p>
+          Both are designed to scale training across multiple GPUs, but they solve fundamentally different problems:
+        </p>
+        
+        <ul>
+          <li><strong>DDP</strong> replicates the entire model on each GPU and synchronizes gradients</li>
+          <li><strong>FSDP</strong> shards model parameters, gradients, and optimizer states across GPUs</li>
+        </ul>
+
+        <p>
+          Choosing the right strategy can mean the difference between training successfully and running out of memory—or 
+          between efficient training and wasting compute. Let's dive deep into how each works.
+        </p>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> Prerequisites</div>
+          <p>
+            This guide assumes familiarity with PyTorch basics and some understanding of GPU memory. 
+            We'll explain the distributed concepts from the ground up.
+          </p>
+        </div>
+
+        <!-- DDP Explained -->
+        <h2 id="ddp-explained">2. DDP Explained: Data Parallelism</h2>
+        
+        <p>
+          <strong>Distributed Data Parallel (DDP)</strong> is PyTorch's workhorse for multi-GPU training. The concept 
+          is simple: replicate the entire model on each GPU, split the data across GPUs, and synchronize gradients 
+          after each backward pass.
+        </p>
+
+        <!-- DDP Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">DDP: How It Works</div>
+          <svg class="comparison-svg" viewBox="0 0 700 320">
+            <!-- Title -->
+            <text x="350" y="25" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#3b82f6">Distributed Data Parallel (DDP)</text>
+            
+            <!-- GPU 0 -->
+            <rect x="40" y="50" width="140" height="220" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="110" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">GPU 0</text>
+            
+            <!-- Model replica 0 -->
+            <rect x="55" y="90" width="110" height="60" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="110" y="115" text-anchor="middle" font-size="10" fill="#3b82f6" font-weight="500">Full Model</text>
+            <text x="110" y="130" text-anchor="middle" font-size="9" fill="#64748b">(All Parameters)</text>
+            
+            <!-- Data batch 0 -->
+            <rect x="55" y="160" width="110" height="35" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="110" y="182" text-anchor="middle" font-size="10" fill="#10b981">Data Batch 0</text>
+            
+            <!-- Gradients 0 -->
+            <rect x="55" y="205" width="110" height="35" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="110" y="227" text-anchor="middle" font-size="10" fill="#f59e0b">Gradients</text>
+            
+            <!-- GPU 1 -->
+            <rect x="210" y="50" width="140" height="220" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="280" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">GPU 1</text>
+            
+            <!-- Model replica 1 -->
+            <rect x="225" y="90" width="110" height="60" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="280" y="115" text-anchor="middle" font-size="10" fill="#3b82f6" font-weight="500">Full Model</text>
+            <text x="280" y="130" text-anchor="middle" font-size="9" fill="#64748b">(All Parameters)</text>
+            
+            <!-- Data batch 1 -->
+            <rect x="225" y="160" width="110" height="35" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="280" y="182" text-anchor="middle" font-size="10" fill="#10b981">Data Batch 1</text>
+            
+            <!-- Gradients 1 -->
+            <rect x="225" y="205" width="110" height="35" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="280" y="227" text-anchor="middle" font-size="10" fill="#f59e0b">Gradients</text>
+            
+            <!-- GPU N -->
+            <rect x="380" y="50" width="140" height="220" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="450" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">GPU N</text>
+            
+            <!-- Model replica N -->
+            <rect x="395" y="90" width="110" height="60" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="450" y="115" text-anchor="middle" font-size="10" fill="#3b82f6" font-weight="500">Full Model</text>
+            <text x="450" y="130" text-anchor="middle" font-size="9" fill="#64748b">(All Parameters)</text>
+            
+            <!-- Data batch N -->
+            <rect x="395" y="160" width="110" height="35" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="450" y="182" text-anchor="middle" font-size="10" fill="#10b981">Data Batch N</text>
+            
+            <!-- Gradients N -->
+            <rect x="395" y="205" width="110" height="35" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="450" y="227" text-anchor="middle" font-size="10" fill="#f59e0b">Gradients</text>
+            
+            <!-- AllReduce -->
+            <rect x="545" y="100" width="130" height="80" rx="10" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="2"/>
+            <text x="610" y="130" text-anchor="middle" font-family="Space Grotesk" font-size="11" font-weight="600" fill="#ef4444">AllReduce</text>
+            <text x="610" y="148" text-anchor="middle" font-size="9" fill="#64748b">Sync Gradients</text>
+            <text x="610" y="163" text-anchor="middle" font-size="9" fill="#64748b">Across GPUs</text>
+            
+            <!-- Arrows to AllReduce -->
+            <path d="M 165 222 L 540 140" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            <path d="M 335 222 L 540 140" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            <path d="M 505 222 L 545 160" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            
+            <!-- Memory note -->
+            <text x="350" y="295" text-anchor="middle" font-size="11" fill="#64748b">Each GPU holds: Full Model + Optimizer State + Gradients</text>
+            <text x="350" y="312" text-anchor="middle" font-size="10" fill="#ef4444" font-weight="500">Memory per GPU = Model Size × ~4 (with Adam)</text>
+            
+            <!-- Arrow marker -->
+            <defs>
+              <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="diagram-caption">Figure 1: DDP replicates the full model on each GPU. Gradients are synchronized via AllReduce after each backward pass.</p>
+        </div>
+
+        <h3>Key Characteristics of DDP</h3>
+        
+        <ul>
+          <li><strong>Full replication:</strong> Each GPU has a complete copy of the model</li>
+          <li><strong>Gradient synchronization:</strong> Uses efficient AllReduce to average gradients</li>
+          <li><strong>Overlapped communication:</strong> Gradient sync overlaps with backward pass</li>
+          <li><strong>Simple to use:</strong> Just wrap your model with <code>DistributedDataParallel</code></li>
+        </ul>
+
+        <div class="info-box ddp">
+          <div class="info-box-title"><i class="fas fa-check-circle"></i> DDP Advantages</div>
+          <p>
+            <strong>Simplicity:</strong> Easy to implement and debug<br>
+            <strong>Performance:</strong> Highly optimized, minimal overhead<br>
+            <strong>Stability:</strong> Battle-tested across millions of training runs<br>
+            <strong>Flexibility:</strong> Works with any model architecture
+          </p>
+        </div>
+
+        <!-- FSDP Explained -->
+        <h2 id="fsdp-explained">3. FSDP Explained: Sharding Everything</h2>
+        
+        <p>
+          <strong>Fully Sharded Data Parallel (FSDP)</strong> takes a radically different approach. Instead of replicating 
+          the model, FSDP <em>shards</em> parameters, gradients, and optimizer states across all GPUs. Each GPU only 
+          holds a fraction of the model at any time.
+        </p>
+        
+        <p>
+          FSDP is inspired by Microsoft's <strong>ZeRO</strong> (Zero Redundancy Optimizer) and provides similar 
+          memory savings. The key insight: at any point during training, a GPU only needs the parameters it's 
+          currently computing with—not the entire model.
+        </p>
+
+        <!-- FSDP Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">FSDP: How It Works</div>
+          <svg class="comparison-svg" viewBox="0 0 700 380">
+            <!-- Title -->
+            <text x="350" y="25" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#8b5cf6">Fully Sharded Data Parallel (FSDP)</text>
+            
+            <!-- GPU 0 -->
+            <rect x="40" y="50" width="180" height="260" rx="10" fill="rgba(139, 92, 246, 0.1)" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="130" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#8b5cf6">GPU 0</text>
+            
+            <!-- Sharded params -->
+            <rect x="55" y="90" width="150" height="45" rx="6" fill="#8b5cf6" opacity="0.3"/>
+            <text x="130" y="108" text-anchor="middle" font-size="10" fill="#8b5cf6" font-weight="500">Params Shard 0</text>
+            <text x="130" y="123" text-anchor="middle" font-size="9" fill="#64748b">(1/N of model)</text>
+            
+            <!-- Sharded optimizer -->
+            <rect x="55" y="145" width="150" height="45" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="130" y="163" text-anchor="middle" font-size="10" fill="#f59e0b" font-weight="500">Optimizer Shard 0</text>
+            <text x="130" y="178" text-anchor="middle" font-size="9" fill="#64748b">(1/N of states)</text>
+            
+            <!-- Sharded gradients -->
+            <rect x="55" y="200" width="150" height="45" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="130" y="218" text-anchor="middle" font-size="10" fill="#10b981" font-weight="500">Gradient Shard 0</text>
+            <text x="130" y="233" text-anchor="middle" font-size="9" fill="#64748b">(1/N of grads)</text>
+            
+            <!-- Data batch -->
+            <rect x="55" y="255" width="150" height="35" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="130" y="277" text-anchor="middle" font-size="10" fill="#3b82f6">Data Batch 0</text>
+            
+            <!-- GPU 1 -->
+            <rect x="260" y="50" width="180" height="260" rx="10" fill="rgba(139, 92, 246, 0.1)" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="350" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#8b5cf6">GPU 1</text>
+            
+            <!-- Sharded params -->
+            <rect x="275" y="90" width="150" height="45" rx="6" fill="#8b5cf6" opacity="0.3"/>
+            <text x="350" y="108" text-anchor="middle" font-size="10" fill="#8b5cf6" font-weight="500">Params Shard 1</text>
+            <text x="350" y="123" text-anchor="middle" font-size="9" fill="#64748b">(1/N of model)</text>
+            
+            <!-- Sharded optimizer -->
+            <rect x="275" y="145" width="150" height="45" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="350" y="163" text-anchor="middle" font-size="10" fill="#f59e0b" font-weight="500">Optimizer Shard 1</text>
+            <text x="350" y="178" text-anchor="middle" font-size="9" fill="#64748b">(1/N of states)</text>
+            
+            <!-- Sharded gradients -->
+            <rect x="275" y="200" width="150" height="45" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="350" y="218" text-anchor="middle" font-size="10" fill="#10b981" font-weight="500">Gradient Shard 1</text>
+            <text x="350" y="233" text-anchor="middle" font-size="9" fill="#64748b">(1/N of grads)</text>
+            
+            <!-- Data batch -->
+            <rect x="275" y="255" width="150" height="35" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="350" y="277" text-anchor="middle" font-size="10" fill="#3b82f6">Data Batch 1</text>
+            
+            <!-- GPU N -->
+            <rect x="480" y="50" width="180" height="260" rx="10" fill="rgba(139, 92, 246, 0.1)" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="570" y="75" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#8b5cf6">GPU N</text>
+            
+            <!-- Sharded params -->
+            <rect x="495" y="90" width="150" height="45" rx="6" fill="#8b5cf6" opacity="0.3"/>
+            <text x="570" y="108" text-anchor="middle" font-size="10" fill="#8b5cf6" font-weight="500">Params Shard N</text>
+            <text x="570" y="123" text-anchor="middle" font-size="9" fill="#64748b">(1/N of model)</text>
+            
+            <!-- Sharded optimizer -->
+            <rect x="495" y="145" width="150" height="45" rx="6" fill="#f59e0b" opacity="0.3"/>
+            <text x="570" y="163" text-anchor="middle" font-size="10" fill="#f59e0b" font-weight="500">Optimizer Shard N</text>
+            <text x="570" y="178" text-anchor="middle" font-size="9" fill="#64748b">(1/N of states)</text>
+            
+            <!-- Sharded gradients -->
+            <rect x="495" y="200" width="150" height="45" rx="6" fill="#10b981" opacity="0.3"/>
+            <text x="570" y="218" text-anchor="middle" font-size="10" fill="#10b981" font-weight="500">Gradient Shard N</text>
+            <text x="570" y="233" text-anchor="middle" font-size="9" fill="#64748b">(1/N of grads)</text>
+            
+            <!-- Data batch -->
+            <rect x="495" y="255" width="150" height="35" rx="6" fill="#3b82f6" opacity="0.3"/>
+            <text x="570" y="277" text-anchor="middle" font-size="10" fill="#3b82f6">Data Batch N</text>
+            
+            <!-- AllGather arrows -->
+            <path d="M 220 115 L 260 115" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrowPurple)"/>
+            <path d="M 440 115 L 480 115" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrowPurple)"/>
+            
+            <!-- Memory note -->
+            <text x="350" y="340" text-anchor="middle" font-size="11" fill="#64748b">Each GPU holds: 1/N Model + 1/N Optimizer + 1/N Gradients</text>
+            <text x="350" y="357" text-anchor="middle" font-size="10" fill="#10b981" font-weight="500">Memory per GPU = Model Size / N (massive savings!)</text>
+            <text x="350" y="374" text-anchor="middle" font-size="9" fill="#64748b">AllGather reconstructs full params on-demand during forward/backward</text>
+            
+            <!-- Arrow marker -->
+            <defs>
+              <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#8b5cf6"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="diagram-caption">Figure 2: FSDP shards everything across GPUs. Parameters are gathered only when needed and immediately discarded.</p>
+        </div>
+
+        <h3>FSDP's Sharding Strategies</h3>
+        
+        <p>FSDP offers different sharding levels to balance memory savings with communication overhead:</p>
+        
+        <ul>
+          <li><strong>FULL_SHARD:</strong> Shard parameters, gradients, and optimizer states (maximum memory savings)</li>
+          <li><strong>SHARD_GRAD_OP:</strong> Shard gradients and optimizer states only (less communication)</li>
+          <li><strong>NO_SHARD:</strong> No sharding, similar to DDP (useful for debugging)</li>
+        </ul>
+
+        <div class="info-box fsdp">
+          <div class="info-box-title"><i class="fas fa-memory"></i> FSDP Advantages</div>
+          <p>
+            <strong>Memory efficiency:</strong> Train models that don't fit on single GPU<br>
+            <strong>Scalability:</strong> Linear memory reduction with more GPUs<br>
+            <strong>Mixed precision:</strong> Native support for FP16/BF16 training<br>
+            <strong>Activation checkpointing:</strong> Built-in integration
+          </p>
+        </div>
+
+        <!-- Comparison -->
+        <h2 id="comparison">4. Head-to-Head Comparison</h2>
+        
+        <p>Let's compare DDP and FSDP across the key dimensions that matter for real-world training:</p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Aspect</th>
+              <th class="ddp-col">DDP</th>
+              <th class="fsdp-col">FSDP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Memory per GPU</strong></td>
+              <td>Full model + optimizer + gradients</td>
+              <td>1/N of each (sharded)</td>
+            </tr>
+            <tr>
+              <td><strong>Communication</strong></td>
+              <td>AllReduce gradients only</td>
+              <td>AllGather params + ReduceScatter grads</td>
+            </tr>
+            <tr>
+              <td><strong>Max Model Size</strong></td>
+              <td>Limited by single GPU memory</td>
+              <td>Limited by total GPU memory</td>
+            </tr>
+            <tr>
+              <td><strong>Training Speed</strong></td>
+              <td>Faster (less communication)</td>
+              <td>Slightly slower (more communication)</td>
+            </tr>
+            <tr>
+              <td><strong>Setup Complexity</strong></td>
+              <td>Simple (1-2 lines)</td>
+              <td>More complex (wrapping policies)</td>
+            </tr>
+            <tr>
+              <td><strong>Debugging</strong></td>
+              <td>Easy (full model visible)</td>
+              <td>Harder (sharded state)</td>
+            </tr>
+            <tr>
+              <td><strong>Checkpointing</strong></td>
+              <td>Standard PyTorch methods</td>
+              <td>Requires special handling</td>
+            </tr>
+            <tr>
+              <td><strong>Best For</strong></td>
+              <td>Models that fit in GPU memory</td>
+              <td>Large models, memory-constrained</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Communication Overhead</div>
+          <p>
+            FSDP's communication pattern is more complex than DDP's. While DDP only syncs gradients,
+            FSDP must gather parameters before each forward/backward and scatter gradients after.
+            This overhead is usually acceptable for large models but can hurt throughput for smaller ones.
+          </p>
+        </div>
+
+        <!-- Code Examples -->
+        <h2 id="code-examples">5. Code Examples</h2>
+        
+        <h3>DDP: Simple and Effective</h3>
+        
+        <p>Setting up DDP requires minimal code changes:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">train_ddp.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.distributed <span class="keyword">as</span> dist
+<span class="keyword">from</span> torch.nn.parallel <span class="keyword">import</span> DistributedDataParallel <span class="keyword">as</span> DDP
+
+<span class="keyword">def</span> <span class="function">setup</span>(rank, world_size):
+    <span class="string">"""Initialize distributed process group."""</span>
+    dist.init_process_group(
+        backend=<span class="string">"nccl"</span>,
+        rank=rank,
+        world_size=world_size
+    )
+    torch.cuda.set_device(rank)
+
+<span class="keyword">def</span> <span class="function">train_ddp</span>(rank, world_size):
+    setup(rank, world_size)
+    
+    <span class="comment"># Create model and move to GPU</span>
+    model = MyModel().to(rank)
+    
+    <span class="comment"># Wrap with DDP - that's it!</span>
+    model = DDP(model, device_ids=[rank])
+    
+    <span class="comment"># Standard training loop</span>
+    optimizer = torch.optim.AdamW(model.parameters(), lr=<span class="number">1e-4</span>)
+    
+    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="builtin">range</span>(num_epochs):
+        <span class="keyword">for</span> batch <span class="keyword">in</span> dataloader:
+            optimizer.zero_grad()
+            loss = model(batch)
+            loss.backward()  <span class="comment"># Gradients auto-synced!</span>
+            optimizer.step()
+    
+    dist.destroy_process_group()
+
+<span class="comment"># Launch with: torchrun --nproc_per_node=4 train_ddp.py</span></code></pre>
+        </div>
+
+        <h3>FSDP: Memory-Efficient Training</h3>
+        
+        <p>FSDP requires more configuration but unlocks training of much larger models:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">train_fsdp.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.distributed <span class="keyword">as</span> dist
+<span class="keyword">from</span> torch.distributed.fsdp <span class="keyword">import</span> (
+    FullyShardedDataParallel <span class="keyword">as</span> FSDP,
+    ShardingStrategy,
+    MixedPrecision,
+    CPUOffload,
+)
+<span class="keyword">from</span> torch.distributed.fsdp.wrap <span class="keyword">import</span> (
+    transformer_auto_wrap_policy,
+)
+<span class="keyword">import</span> functools
+
+<span class="keyword">def</span> <span class="function">train_fsdp</span>(rank, world_size):
+    setup(rank, world_size)
+    
+    <span class="comment"># Define mixed precision policy</span>
+    mixed_precision_policy = MixedPrecision(
+        param_dtype=torch.bfloat16,
+        reduce_dtype=torch.bfloat16,
+        buffer_dtype=torch.bfloat16,
+    )
+    
+    <span class="comment"># Define auto-wrap policy (wrap transformer layers)</span>
+    wrap_policy = functools.partial(
+        transformer_auto_wrap_policy,
+        transformer_layer_cls={TransformerBlock},  <span class="comment"># Your layer class</span>
+    )
+    
+    <span class="comment"># Create model</span>
+    model = MyLargeModel()
+    
+    <span class="comment"># Wrap with FSDP</span>
+    model = FSDP(
+        model,
+        sharding_strategy=ShardingStrategy.FULL_SHARD,
+        mixed_precision=mixed_precision_policy,
+        auto_wrap_policy=wrap_policy,
+        device_id=torch.cuda.current_device(),
+        <span class="comment"># Optional: offload params to CPU</span>
+        <span class="comment"># cpu_offload=CPUOffload(offload_params=True),</span>
+    )
+    
+    <span class="comment"># Use FSDP-aware optimizer</span>
+    optimizer = torch.optim.AdamW(model.parameters(), lr=<span class="number">1e-4</span>)
+    
+    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="builtin">range</span>(num_epochs):
+        <span class="keyword">for</span> batch <span class="keyword">in</span> dataloader:
+            optimizer.zero_grad()
+            
+            <span class="comment"># Forward pass - params gathered automatically</span>
+            loss = model(batch)
+            
+            <span class="comment"># Backward pass - gradients sharded automatically</span>
+            loss.backward()
+            optimizer.step()
+    
+    dist.destroy_process_group()</code></pre>
+        </div>
+
+        <h3>FSDP Checkpointing</h3>
+        
+        <p>Saving and loading FSDP checkpoints requires special handling:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">fsdp_checkpoint.py</span>
+          </div>
+          <pre><code><span class="keyword">from</span> torch.distributed.fsdp <span class="keyword">import</span> (
+    FullStateDictConfig,
+    StateDictType,
+)
+
+<span class="keyword">def</span> <span class="function">save_fsdp_checkpoint</span>(model, optimizer, path, rank):
+    <span class="string">"""Save full state dict (gathered to rank 0)."""</span>
+    
+    <span class="comment"># Configure to gather full state dict</span>
+    save_policy = FullStateDictConfig(
+        offload_to_cpu=<span class="keyword">True</span>,
+        rank0_only=<span class="keyword">True</span>,
+    )
+    
+    <span class="keyword">with</span> FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
+        state_dict = model.state_dict()
+        optim_state = FSDP.optim_state_dict(model, optimizer)
+        
+        <span class="keyword">if</span> rank == <span class="number">0</span>:
+            torch.save({
+                <span class="string">"model"</span>: state_dict,
+                <span class="string">"optimizer"</span>: optim_state,
+            }, path)
+    
+    dist.barrier()  <span class="comment"># Wait for rank 0 to finish saving</span>
+
+<span class="keyword">def</span> <span class="function">load_fsdp_checkpoint</span>(model, optimizer, path):
+    <span class="string">"""Load checkpoint into FSDP model."""</span>
+    
+    checkpoint = torch.load(path, map_location=<span class="string">"cpu"</span>)
+    
+    <span class="keyword">with</span> FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT):
+        model.load_state_dict(checkpoint[<span class="string">"model"</span>])
+        
+    optim_state = FSDP.optim_state_dict_to_load(
+        checkpoint[<span class="string">"optimizer"</span>], model, optimizer
+    )
+    optimizer.load_state_dict(optim_state)</code></pre>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> Pro Tip: Sharded Checkpoints</div>
+          <p>
+            For very large models, use <code>StateDictType.SHARDED_STATE_DICT</code> to save sharded 
+            checkpoints directly. This avoids gathering the entire model to rank 0 and is much faster 
+            for models with billions of parameters.
+          </p>
+        </div>
+
+        <!-- Decision Guide -->
+        <h2 id="decision-guide">6. Decision Guide: When to Use Which</h2>
+        
+        <p>
+          Here's a practical decision framework for choosing between DDP and FSDP:
+        </p>
+
+        <div class="decision-tree">
+          <h4>🎯 Quick Decision Guide</h4>
+          
+          <div class="decision-item ddp">
+            <div class="decision-icon">✓</div>
+            <div class="decision-content">
+              <h5>Use DDP <span class="badge">Recommended</span></h5>
+              <p>
+                Model fits comfortably in GPU memory (with optimizer & gradients).<br>
+                You want maximum training throughput.<br>
+                You need simple debugging and checkpointing.
+              </p>
+            </div>
+          </div>
+          
+          <div class="decision-item fsdp">
+            <div class="decision-icon">✓</div>
+            <div class="decision-content">
+              <h5>Use FSDP <span class="badge">When Memory-Constrained</span></h5>
+              <p>
+                Model doesn't fit on a single GPU.<br>
+                You're training LLMs or very large vision models.<br>
+                You want to maximize batch size for better convergence.
+              </p>
+            </div>
+          </div>
+          
+          <div class="decision-item ddp">
+            <div class="decision-icon">⚡</div>
+            <div class="decision-content">
+              <h5>Performance Priority → DDP</h5>
+              <p>
+                You have fast interconnect (NVLink/InfiniBand).<br>
+                Model is medium-sized (fits with overhead).<br>
+                Throughput is more important than batch size.
+              </p>
+            </div>
+          </div>
+          
+          <div class="decision-item fsdp">
+            <div class="decision-icon">🧠</div>
+            <div class="decision-content">
+              <h5>Large Model Training → FSDP</h5>
+              <p>
+                Training 7B+ parameter models.<br>
+                Using 80GB A100s but still memory-limited.<br>
+                Need mixed precision + activation checkpointing.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h3>Model Size Guidelines</h3>
+        
+        <p>
+          As a rough guide, here's when to switch from DDP to FSDP based on model size and GPU memory:
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Model Size</th>
+              <th>GPU Memory</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>&lt; 1B params</td>
+              <td>40GB+ (A100)</td>
+              <td class="ddp-col">DDP</td>
+            </tr>
+            <tr>
+              <td>1-3B params</td>
+              <td>40GB (A100)</td>
+              <td class="ddp-col">DDP with gradient checkpointing</td>
+            </tr>
+            <tr>
+              <td>3-7B params</td>
+              <td>40GB (A100)</td>
+              <td class="fsdp-col">FSDP (SHARD_GRAD_OP or FULL_SHARD)</td>
+            </tr>
+            <tr>
+              <td>7-13B params</td>
+              <td>80GB (A100)</td>
+              <td class="fsdp-col">FSDP FULL_SHARD</td>
+            </tr>
+            <tr>
+              <td>13B+ params</td>
+              <td>Any</td>
+              <td class="fsdp-col">FSDP + CPU offload or tensor parallel</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Migration -->
+        <h2 id="migration">7. Migrating from DDP to FSDP</h2>
+        
+        <p>
+          If you've outgrown DDP and need FSDP, here's what changes:
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">migration_diff.py</span>
+          </div>
+          <pre><code><span class="comment"># Before: DDP</span>
+<span class="comment"># ─────────────────────────────────────</span>
+<span class="keyword">from</span> torch.nn.parallel <span class="keyword">import</span> DistributedDataParallel <span class="keyword">as</span> DDP
+
+model = MyModel().to(rank)
+model = DDP(model, device_ids=[rank])
+
+<span class="comment"># After: FSDP</span>
+<span class="comment"># ─────────────────────────────────────</span>
+<span class="keyword">from</span> torch.distributed.fsdp <span class="keyword">import</span> FullyShardedDataParallel <span class="keyword">as</span> FSDP
+
+model = MyModel()  <span class="comment"># Don't move to GPU first!</span>
+model = FSDP(
+    model,
+    sharding_strategy=ShardingStrategy.FULL_SHARD,
+    device_id=torch.cuda.current_device(),
+)</code></pre>
+        </div>
+
+        <h3>Key Migration Considerations</h3>
+        
+        <ul>
+          <li><strong>Model initialization:</strong> Don't call <code>.to(device)</code> before FSDP wrapping</li>
+          <li><strong>Checkpointing:</strong> Update save/load code to handle sharded state</li>
+          <li><strong>Learning rate:</strong> May need adjustment due to different gradient handling</li>
+          <li><strong>Batch size:</strong> You can likely increase it (more memory available)</li>
+          <li><strong>Wrap policy:</strong> Define which layers to wrap for best performance</li>
+        </ul>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Common Migration Pitfalls</div>
+          <p>
+            <strong>1.</strong> Moving model to GPU before FSDP wrapping (causes OOM)<br>
+            <strong>2.</strong> Not updating checkpoint code (corrupted saves)<br>
+            <strong>3.</strong> Missing synchronization barriers (race conditions)<br>
+            <strong>4.</strong> Wrong wrap policy (poor performance or errors)
+          </p>
+        </div>
+
+        <!-- Summary -->
+        <h2 id="summary">8. Summary & Best Practices</h2>
+        
+        <p>
+          Let's wrap up with actionable best practices for both approaches:
+        </p>
+
+        <h3>DDP Best Practices</h3>
+        
+        <ul>
+          <li><strong>Use gradient accumulation</strong> to simulate larger batch sizes</li>
+          <li><strong>Enable find_unused_parameters=False</strong> unless you need it (faster)</li>
+          <li><strong>Use DistributedSampler</strong> for proper data distribution</li>
+          <li><strong>Sync batch norm</strong> with <code>torch.nn.SyncBatchNorm.convert_sync_batchnorm</code></li>
+          <li><strong>Pin memory</strong> in DataLoader for faster GPU transfers</li>
+        </ul>
+
+        <h3>FSDP Best Practices</h3>
+        
+        <ul>
+          <li><strong>Use transformer_auto_wrap_policy</strong> for transformer models</li>
+          <li><strong>Enable mixed precision</strong> (BF16 preferred on Ampere+)</li>
+          <li><strong>Combine with activation checkpointing</strong> for maximum memory savings</li>
+          <li><strong>Use SHARD_GRAD_OP</strong> if communication is your bottleneck</li>
+          <li><strong>Profile with torch.profiler</strong> to identify bottlenecks</li>
+          <li><strong>Use sharded checkpoints</strong> for models > 10B parameters</li>
+        </ul>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-rocket"></i> Final Recommendations</div>
+          <p>
+            <strong>Start with DDP</strong> — it's simpler and faster for most workloads.<br>
+            <strong>Switch to FSDP</strong> when you hit memory limits or need larger batch sizes.<br>
+            <strong>Profile both</strong> if you're unsure — actual performance depends on your specific setup.
+          </p>
+        </div>
+
+        <!-- Post Footer -->
+        <div class="post-footer">
+          <div class="author-card">
+            <div class="author-avatar">AO</div>
+            <div class="author-info">
+              <h4>Alireza Olama</h4>
+              <p>Postdoctoral researcher focused on efficient training of large-scale AI systems. Writing about GPU programming, distributed training, and performance optimization.</p>
+            </div>
+          </div>
+          
+          <div class="post-navigation">
+            <a href="cuda-memory-hierarchy.html" class="post-nav-link prev">
+              <div class="label"><i class="fas fa-arrow-left"></i> Previous</div>
+              <div class="title">Understanding CUDA Memory Hierarchy</div>
+            </a>
+            <a href="admm-distributed-ml.html" class="post-nav-link next">
+              <div class="label">Next <i class="fas fa-arrow-right"></i></div>
+              <div class="title">ADMM for Distributed Machine Learning</div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- Theme Toggle Script -->
+    <script>
+      function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        const icon = document.querySelector('.theme-toggle i');
+        icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+      }
+      
+      // Check for saved theme preference
+      if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+      }
+      
+      // Smooth scroll for TOC links
+      document.querySelectorAll('.toc a').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = document.querySelector(link.getAttribute('href'));
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    </script>
+  </body>
+</html>

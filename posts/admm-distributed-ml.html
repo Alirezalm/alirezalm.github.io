@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADMM for Distributed Machine Learning: From Theory to Practice | Alireza Olama</title>
+    <meta name="description" content="A comprehensive guide to the Alternating Direction Method of Multipliers (ADMM) for distributed optimization in machine learning" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- KaTeX for Math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    
+    <!-- Base styles -->
+    <link rel="stylesheet" href="../styles.css" />
+    
+    <style>
+      /* Post-specific styles */
+      .post-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 16px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      body.dark-mode .post-nav {
+        background: rgba(15, 23, 42, 0.95);
+      }
+      
+      .post-nav-links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      
+      .post-nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+      }
+      
+      .post-nav-links a:hover {
+        color: var(--accent);
+      }
+      
+      .post-hero {
+        padding: 140px 32px 60px;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+        color: white;
+      }
+      
+      .post-hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
+      .post-category {
+        display: inline-block;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+      }
+      
+      .post-hero h1 {
+        font-family: 'Fraunces', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1.2;
+      }
+      
+      .post-hero .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.9;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      
+      .post-meta {
+        display: flex;
+        gap: 24px;
+        font-size: 0.9rem;
+        opacity: 0.85;
+      }
+      
+      .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .post-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 60px 32px;
+      }
+      
+      .post-content h2 {
+        font-family: 'Fraunces', serif;
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 48px 0 24px;
+        color: var(--text-primary);
+        border-bottom: 2px solid #f59e0b;
+        padding-bottom: 8px;
+      }
+      
+      .post-content h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 32px 0 16px;
+        color: var(--text-primary);
+      }
+      
+      .post-content p {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 20px;
+        color: var(--text-secondary);
+      }
+      
+      .post-content strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      
+      .post-content ul, .post-content ol {
+        margin: 20px 0;
+        padding-left: 24px;
+      }
+      
+      .post-content li {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+      }
+      
+      /* Table of Contents */
+      .toc {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px 32px;
+        margin-bottom: 40px;
+        border-left: 4px solid #f59e0b;
+      }
+      
+      .toc-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+      }
+      
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .toc li {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+      
+      .toc a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      
+      .toc a:hover {
+        color: #f59e0b;
+      }
+      
+      /* Math blocks */
+      .math-block {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px 0;
+        overflow-x: auto;
+        text-align: center;
+      }
+      
+      .math-block .katex {
+        font-size: 1.1rem;
+      }
+      
+      .math-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 12px;
+        font-style: italic;
+      }
+      
+      /* Code blocks */
+      .code-block {
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 24px 0;
+        overflow: hidden;
+      }
+      
+      .code-header {
+        background: #334155;
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .code-lang {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+      
+      .code-filename {
+        color: #f59e0b;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      
+      .code-block pre {
+        padding: 20px;
+        overflow-x: auto;
+        margin: 0;
+      }
+      
+      .code-block code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      
+      /* Syntax highlighting */
+      .keyword { color: #c792ea; }
+      .type { color: #82aaff; }
+      .function { color: #82aaff; }
+      .string { color: #c3e88d; }
+      .number { color: #f78c6c; }
+      .comment { color: #697098; font-style: italic; }
+      .decorator { color: #f78c6c; }
+      .param { color: #ffcb6b; }
+      .builtin { color: #89ddff; }
+      .operator { color: #89ddff; }
+      
+      /* Info boxes */
+      .info-box {
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
+      
+      .info-box-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .info-box p {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      
+      .info-box.note {
+        background: rgba(59, 130, 246, 0.1);
+        border-left: 4px solid #3b82f6;
+      }
+      
+      .info-box.note .info-box-title {
+        color: #3b82f6;
+      }
+      
+      .info-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 4px solid #f59e0b;
+      }
+      
+      .info-box.warning .info-box-title {
+        color: #f59e0b;
+      }
+      
+      .info-box.tip {
+        background: rgba(16, 185, 129, 0.1);
+        border-left: 4px solid #10b981;
+      }
+      
+      .info-box.tip .info-box-title {
+        color: #10b981;
+      }
+      
+      .info-box.theory {
+        background: rgba(139, 92, 246, 0.1);
+        border-left: 4px solid #8b5cf6;
+      }
+      
+      .info-box.theory .info-box-title {
+        color: #8b5cf6;
+      }
+      
+      /* Algorithm box */
+      .algorithm-box {
+        background: var(--bg-secondary);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 32px 0;
+      }
+      
+      .algorithm-box h4 {
+        font-family: 'Fraunces', serif;
+        font-size: 1.2rem;
+        color: #f59e0b;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .algorithm-box ol {
+        margin: 0;
+        padding-left: 24px;
+      }
+      
+      .algorithm-box li {
+        margin-bottom: 12px;
+        font-size: 1rem;
+      }
+      
+      .algorithm-box .step-label {
+        font-weight: 600;
+        color: #f59e0b;
+      }
+      
+      /* Diagrams */
+      .diagram-container {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 32px 0;
+        text-align: center;
+      }
+      
+      body.dark-mode .diagram-container {
+        background: rgba(30, 41, 59, 0.5);
+      }
+      
+      .diagram-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+      }
+      
+      .diagram-caption {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 16px;
+        font-style: italic;
+      }
+      
+      .admm-svg {
+        width: 100%;
+        max-width: 700px;
+        height: auto;
+      }
+      
+      /* Comparison table */
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 0.95rem;
+      }
+      
+      .comparison-table th,
+      .comparison-table td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .comparison-table th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .comparison-table th:first-child {
+        border-top-left-radius: 8px;
+      }
+      
+      .comparison-table th:last-child {
+        border-top-right-radius: 8px;
+      }
+      
+      .comparison-table td {
+        color: var(--text-secondary);
+      }
+      
+      .comparison-table tr:hover td {
+        background: var(--bg-secondary);
+      }
+      
+      /* Post footer */
+      .post-footer {
+        margin-top: 60px;
+        padding-top: 40px;
+        border-top: 1px solid var(--border);
+      }
+      
+      .author-card {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        padding: 24px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+      }
+      
+      .author-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      
+      .author-info h4 {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+        color: var(--text-primary);
+      }
+      
+      .author-info p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+      
+      /* Post navigation */
+      .post-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 40px;
+        gap: 20px;
+      }
+      
+      .post-nav-link {
+        flex: 1;
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .post-nav-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      .post-nav-link .label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      
+      .post-nav-link .title {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .post-nav-link.next {
+        text-align: right;
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .post-hero {
+          padding: 120px 20px 40px;
+        }
+        
+        .post-meta {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        
+        .post-container {
+          padding: 40px 20px;
+        }
+        
+        .code-block pre {
+          padding: 16px;
+        }
+        
+        .code-block code {
+          font-size: 0.8rem;
+        }
+        
+        .math-block {
+          padding: 16px;
+        }
+        
+        .math-block .katex {
+          font-size: 0.95rem;
+        }
+        
+        .post-navigation {
+          flex-direction: column;
+        }
+        
+        .post-nav-link.next {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="post-nav">
+      <a href="../index.html" class="logo">AO</a>
+      <div class="post-nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../blog.html">Blog</a>
+        <a href="../index.html#research">Research</a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="post-hero">
+      <div class="post-hero-content">
+        <span class="post-category"><i class="fas fa-chart-line"></i> Optimization</span>
+        <h1>ADMM for Distributed Machine Learning</h1>
+        <p class="subtitle">From theory to practice: Understanding the Alternating Direction Method of Multipliers for scalable optimization</p>
+        <div class="post-meta">
+          <span><i class="fas fa-user"></i> Alireza Olama</span>
+          <span><i class="fas fa-calendar"></i> March 6, 2026</span>
+          <span><i class="fas fa-clock"></i> 18 min read</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Article Content -->
+    <article class="post-container">
+      <div class="post-content">
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <div class="toc-title"><i class="fas fa-list"></i> Table of Contents</div>
+          <ol>
+            <li><a href="#introduction">Introduction: Why ADMM?</a></li>
+            <li><a href="#background">Mathematical Background</a></li>
+            <li><a href="#algorithm">The ADMM Algorithm</a></li>
+            <li><a href="#distributed">ADMM for Distributed ML</a></li>
+            <li><a href="#convergence">Convergence Guarantees</a></li>
+            <li><a href="#implementation">Python Implementation</a></li>
+            <li><a href="#applications">Applications & Examples</a></li>
+            <li><a href="#summary">Summary & Further Reading</a></li>
+          </ol>
+        </div>
+
+        <!-- Introduction -->
+        <h2 id="introduction">1. Introduction: Why ADMM?</h2>
+        
+        <p>
+          The <strong>Alternating Direction Method of Multipliers (ADMM)</strong> is one of the most versatile 
+          algorithms in optimization. Originally developed in the 1970s, it has experienced a remarkable 
+          renaissance in the era of big data and distributed computing.
+        </p>
+        
+        <p>
+          ADMM shines in scenarios where you need to:
+        </p>
+        
+        <ul>
+          <li><strong>Distribute computation</strong> across multiple machines or workers</li>
+          <li><strong>Handle constraints</strong> elegantly through variable splitting</li>
+          <li><strong>Combine different loss functions</strong> that are individually easy to optimize</li>
+          <li><strong>Scale to massive datasets</strong> that don't fit on a single machine</li>
+        </ul>
+
+        <p>
+          Think of ADMM as a "divide and conquer" strategy for optimization. It breaks hard problems into 
+          simpler subproblems that can be solved in parallel, then coordinates the solutions through a 
+          consensus mechanism.
+        </p>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> Historical Note</div>
+          <p>
+            ADMM was independently discovered by Glowinski & Marroco (1975) and Gabay & Mercier (1976). 
+            The seminal review by Boyd et al. (2011) sparked its modern popularity, showing its power 
+            for large-scale distributed optimization.
+          </p>
+        </div>
+
+        <!-- Mathematical Background -->
+        <h2 id="background">2. Mathematical Background</h2>
+        
+        <p>
+          Before diving into ADMM, let's establish the mathematical foundation. ADMM is designed to solve 
+          problems of the following form:
+        </p>
+
+        <div class="math-block">
+          $$\min_{x, z} \quad f(x) + g(z) \quad \text{subject to} \quad Ax + Bz = c$$
+          <p class="math-label">The standard ADMM problem formulation</p>
+        </div>
+
+        <p>Where:</p>
+        <ul>
+          <li>$f(x)$ and $g(z)$ are convex functions (the objectives we want to minimize)</li>
+          <li>$A \in \mathbb{R}^{p \times n}$ and $B \in \mathbb{R}^{p \times m}$ are matrices</li>
+          <li>$x \in \mathbb{R}^n$ and $z \in \mathbb{R}^m$ are the optimization variables</li>
+          <li>$c \in \mathbb{R}^p$ is a constant vector</li>
+        </ul>
+
+        <h3>The Augmented Lagrangian</h3>
+        
+        <p>
+          ADMM works with the <strong>augmented Lagrangian</strong>, which adds a quadratic penalty term 
+          to the standard Lagrangian:
+        </p>
+
+        <div class="math-block">
+          $$\mathcal{L}_\rho(x, z, y) = f(x) + g(z) + y^T(Ax + Bz - c) + \frac{\rho}{2}\|Ax + Bz - c\|_2^2$$
+          <p class="math-label">The augmented Lagrangian with penalty parameter ρ</p>
+        </div>
+
+        <p>
+          The key insight is that:
+        </p>
+        <ul>
+          <li>$y$ is the <strong>dual variable</strong> (Lagrange multiplier) enforcing the constraint</li>
+          <li>$\rho > 0$ is the <strong>penalty parameter</strong> that controls constraint violation</li>
+          <li>The quadratic term improves convergence without changing the optimal solution</li>
+        </ul>
+
+        <div class="info-box theory">
+          <div class="info-box-title"><i class="fas fa-graduation-cap"></i> Why "Augmented"?</div>
+          <p>
+            The standard Lagrangian only has the linear term $y^T(Ax + Bz - c)$. Adding the quadratic 
+            penalty $\frac{\rho}{2}\|Ax + Bz - c\|_2^2$ makes the problem more strongly convex, 
+            leading to better numerical stability and faster convergence.
+          </p>
+        </div>
+
+        <!-- The Algorithm -->
+        <h2 id="algorithm">3. The ADMM Algorithm</h2>
+        
+        <p>
+          ADMM minimizes the augmented Lagrangian by alternating between updating $x$, $z$, and $y$. 
+          The "alternating direction" name comes from optimizing one variable at a time while keeping 
+          others fixed.
+        </p>
+
+        <div class="algorithm-box">
+          <h4><i class="fas fa-code"></i> Algorithm: ADMM</h4>
+          <ol>
+            <li>
+              <span class="step-label">Initialize:</span> Choose $z^0$, $y^0$, and penalty $\rho > 0$
+            </li>
+            <li>
+              <span class="step-label">Repeat</span> until convergence:
+              <ol type="a" style="margin-top: 8px;">
+                <li>
+                  <strong>x-update:</strong> $x^{k+1} = \arg\min_x \mathcal{L}_\rho(x, z^k, y^k)$
+                </li>
+                <li>
+                  <strong>z-update:</strong> $z^{k+1} = \arg\min_z \mathcal{L}_\rho(x^{k+1}, z, y^k)$
+                </li>
+                <li>
+                  <strong>y-update:</strong> $y^{k+1} = y^k + \rho(Ax^{k+1} + Bz^{k+1} - c)$
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </div>
+
+        <p>
+          Let's understand each step:
+        </p>
+
+        <h3>The x-update</h3>
+        <p>
+          Minimize with respect to $x$, treating $z$ and $y$ as constants:
+        </p>
+        <div class="math-block">
+          $$x^{k+1} = \arg\min_x \left( f(x) + \frac{\rho}{2}\|Ax + Bz^k - c + u^k\|_2^2 \right)$$
+          <p class="math-label">Where $u = y/\rho$ is the scaled dual variable</p>
+        </div>
+
+        <h3>The z-update</h3>
+        <p>
+          Minimize with respect to $z$, using the fresh $x^{k+1}$:
+        </p>
+        <div class="math-block">
+          $$z^{k+1} = \arg\min_z \left( g(z) + \frac{\rho}{2}\|Ax^{k+1} + Bz - c + u^k\|_2^2 \right)$$
+        </div>
+
+        <h3>The y-update (Dual Update)</h3>
+        <p>
+          This is simply a gradient ascent step on the dual problem:
+        </p>
+        <div class="math-block">
+          $$y^{k+1} = y^k + \rho(Ax^{k+1} + Bz^{k+1} - c)$$
+          <p class="math-label">Or equivalently: $u^{k+1} = u^k + Ax^{k+1} + Bz^{k+1} - c$</p>
+        </div>
+
+        <!-- ADMM Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">ADMM Iteration Flow</div>
+          <svg class="admm-svg" viewBox="0 0 700 280">
+            <!-- Background -->
+            <rect x="20" y="20" width="660" height="240" rx="12" fill="none" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4"/>
+            <text x="350" y="45" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#94a3b8">ADMM Iteration k → k+1</text>
+            
+            <!-- x-update box -->
+            <rect x="50" y="80" width="160" height="100" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="130" y="110" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#3b82f6">x-update</text>
+            <text x="130" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#64748b">min f(x) + ρ/2‖...‖²</text>
+            <text x="130" y="155" text-anchor="middle" font-size="10" fill="#64748b">Uses: z^k, y^k</text>
+            <text x="130" y="170" text-anchor="middle" font-size="10" fill="#3b82f6" font-weight="500">Output: x^{k+1}</text>
+            
+            <!-- Arrow 1 -->
+            <path d="M 210 130 L 260 130" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowGray)"/>
+            
+            <!-- z-update box -->
+            <rect x="270" y="80" width="160" height="100" rx="10" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="2"/>
+            <text x="350" y="110" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#10b981">z-update</text>
+            <text x="350" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#64748b">min g(z) + ρ/2‖...‖²</text>
+            <text x="350" y="155" text-anchor="middle" font-size="10" fill="#64748b">Uses: x^{k+1}, y^k</text>
+            <text x="350" y="170" text-anchor="middle" font-size="10" fill="#10b981" font-weight="500">Output: z^{k+1}</text>
+            
+            <!-- Arrow 2 -->
+            <path d="M 430 130 L 480 130" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowGray)"/>
+            
+            <!-- y-update box -->
+            <rect x="490" y="80" width="160" height="100" rx="10" fill="rgba(245, 158, 11, 0.1)" stroke="#f59e0b" stroke-width="2"/>
+            <text x="570" y="110" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#f59e0b">y-update</text>
+            <text x="570" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#64748b">y += ρ(Ax + Bz - c)</text>
+            <text x="570" y="155" text-anchor="middle" font-size="10" fill="#64748b">Uses: x^{k+1}, z^{k+1}</text>
+            <text x="570" y="170" text-anchor="middle" font-size="10" fill="#f59e0b" font-weight="500">Output: y^{k+1}</text>
+            
+            <!-- Loop arrow -->
+            <path d="M 570 180 L 570 220 L 130 220 L 130 180" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrowPurple)"/>
+            <text x="350" y="238" text-anchor="middle" font-size="11" fill="#8b5cf6" font-weight="500">Next iteration</text>
+            
+            <!-- Arrow markers -->
+            <defs>
+              <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+              </marker>
+              <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#8b5cf6"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="diagram-caption">Figure 1: ADMM alternates between three updates, each using the most recent values from previous steps.</p>
+        </div>
+
+        <!-- Distributed ADMM -->
+        <h2 id="distributed">4. ADMM for Distributed ML</h2>
+        
+        <p>
+          The real power of ADMM emerges in distributed settings. Consider training a machine learning 
+          model across $N$ workers, each with local data $\{(x_i, y_i)\}$:
+        </p>
+
+        <div class="math-block">
+          $$\min_\theta \sum_{i=1}^{N} f_i(\theta) + r(\theta)$$
+          <p class="math-label">Global objective: sum of local losses + regularizer</p>
+        </div>
+
+        <p>
+          The challenge: data is distributed, but we want a single global model. ADMM solves this through 
+          a <strong>consensus formulation</strong>.
+        </p>
+
+        <h3>Consensus ADMM</h3>
+        
+        <p>
+          The key idea: give each worker its own local copy $\theta_i$, then enforce they all agree on a 
+          global consensus variable $z$:
+        </p>
+
+        <div class="math-block">
+          $$\min_{\theta_1, \ldots, \theta_N, z} \sum_{i=1}^{N} f_i(\theta_i) + r(z) \quad \text{subject to} \quad \theta_i = z \quad \forall i$$
+          <p class="math-label">Consensus formulation: local variables must equal global consensus</p>
+        </div>
+
+        <!-- Distributed ADMM Diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Distributed Consensus ADMM</div>
+          <svg class="admm-svg" viewBox="0 0 700 350">
+            <!-- Central server -->
+            <rect x="275" y="20" width="150" height="80" rx="12" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-width="2"/>
+            <text x="350" y="50" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#f59e0b">Central Server</text>
+            <text x="350" y="72" text-anchor="middle" font-size="11" fill="#64748b">Global z, averaging</text>
+            <text x="350" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f59e0b">z = avg(θᵢ + uᵢ)</text>
+            
+            <!-- Workers -->
+            <!-- Worker 1 -->
+            <rect x="40" y="180" width="130" height="140" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="105" y="205" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">Worker 1</text>
+            <rect x="55" y="215" width="100" height="25" rx="4" fill="#3b82f6" opacity="0.2"/>
+            <text x="105" y="232" text-anchor="middle" font-size="9" fill="#3b82f6">Local Data D₁</text>
+            <text x="105" y="260" text-anchor="middle" font-size="10" fill="#64748b">θ₁-update:</text>
+            <text x="105" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">min f₁(θ₁)</text>
+            <text x="105" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">+ ρ/2‖θ₁-z+u₁‖²</text>
+            
+            <!-- Worker 2 -->
+            <rect x="200" y="180" width="130" height="140" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="265" y="205" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">Worker 2</text>
+            <rect x="215" y="215" width="100" height="25" rx="4" fill="#3b82f6" opacity="0.2"/>
+            <text x="265" y="232" text-anchor="middle" font-size="9" fill="#3b82f6">Local Data D₂</text>
+            <text x="265" y="260" text-anchor="middle" font-size="10" fill="#64748b">θ₂-update:</text>
+            <text x="265" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">min f₂(θ₂)</text>
+            <text x="265" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">+ ρ/2‖θ₂-z+u₂‖²</text>
+            
+            <!-- Worker 3 -->
+            <rect x="370" y="180" width="130" height="140" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="435" y="205" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">Worker 3</text>
+            <rect x="385" y="215" width="100" height="25" rx="4" fill="#3b82f6" opacity="0.2"/>
+            <text x="435" y="232" text-anchor="middle" font-size="9" fill="#3b82f6">Local Data D₃</text>
+            <text x="435" y="260" text-anchor="middle" font-size="10" fill="#64748b">θ₃-update:</text>
+            <text x="435" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">min f₃(θ₃)</text>
+            <text x="435" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">+ ρ/2‖θ₃-z+u₃‖²</text>
+            
+            <!-- Worker N -->
+            <rect x="530" y="180" width="130" height="140" rx="10" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="595" y="205" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="600" fill="#3b82f6">Worker N</text>
+            <rect x="545" y="215" width="100" height="25" rx="4" fill="#3b82f6" opacity="0.2"/>
+            <text x="595" y="232" text-anchor="middle" font-size="9" fill="#3b82f6">Local Data Dₙ</text>
+            <text x="595" y="260" text-anchor="middle" font-size="10" fill="#64748b">θₙ-update:</text>
+            <text x="595" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">min fₙ(θₙ)</text>
+            <text x="595" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#64748b">+ ρ/2‖θₙ-z+uₙ‖²</text>
+            
+            <!-- Arrows up (send θ + u) -->
+            <path d="M 105 180 L 290 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+            <path d="M 265 180 L 320 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+            <path d="M 435 180 L 380 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+            <path d="M 595 180 L 410 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+            
+            <!-- Arrows down (receive z) -->
+            <path d="M 290 100 L 105 180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            <path d="M 320 100 L 265 180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            <path d="M 380 100 L 435 180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            <path d="M 410 100 L 595 180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrowOrange)"/>
+            
+            <!-- Legend -->
+            <line x1="50" y1="340" x2="80" y2="340" stroke="#10b981" stroke-width="2"/>
+            <text x="90" y="344" font-size="10" fill="#64748b">Send θᵢ + uᵢ to server</text>
+            <line x1="220" y1="340" x2="250" y2="340" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4"/>
+            <text x="260" y="344" font-size="10" fill="#64748b">Receive updated z</text>
+            
+            <!-- Arrow markers -->
+            <defs>
+              <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#10b981"/>
+              </marker>
+              <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+              </marker>
+            </defs>
+          </svg>
+          <p class="diagram-caption">Figure 2: Consensus ADMM architecture. Workers optimize locally with their data, server aggregates to enforce consensus.</p>
+        </div>
+
+        <h3>The Distributed Algorithm</h3>
+
+        <div class="algorithm-box">
+          <h4><i class="fas fa-network-wired"></i> Algorithm: Consensus ADMM for Distributed ML</h4>
+          <ol>
+            <li>
+              <span class="step-label">Initialize:</span> $z^0$, $u_i^0 = 0$ for all workers, choose $\rho > 0$
+            </li>
+            <li>
+              <span class="step-label">Repeat</span> until convergence:
+              <ol type="a" style="margin-top: 8px;">
+                <li>
+                  <strong>Local update (parallel):</strong> Each worker $i$ solves:
+                  $$\theta_i^{k+1} = \arg\min_{\theta_i} f_i(\theta_i) + \frac{\rho}{2}\|\theta_i - z^k + u_i^k\|_2^2$$
+                </li>
+                <li>
+                  <strong>Global update (server):</strong> Compute consensus:
+                  $$z^{k+1} = \frac{1}{N}\sum_{i=1}^{N}(\theta_i^{k+1} + u_i^k) + \text{prox}_{r/\rho N}$$
+                </li>
+                <li>
+                  <strong>Dual update (parallel):</strong> Each worker updates:
+                  $$u_i^{k+1} = u_i^k + \theta_i^{k+1} - z^{k+1}$$
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> Communication Efficiency</div>
+          <p>
+            ADMM only requires workers to send/receive <strong>one vector per iteration</strong> (the parameter 
+            vector $\theta_i$). This is much more efficient than methods that require gradient accumulation 
+            across all workers every step.
+          </p>
+        </div>
+
+        <!-- Convergence -->
+        <h2 id="convergence">5. Convergence Guarantees</h2>
+        
+        <p>
+          One of ADMM's strengths is its solid theoretical foundation. Under mild conditions, ADMM provides 
+          convergence guarantees that practitioners can rely on.
+        </p>
+
+        <h3>Convergence Theorem</h3>
+        
+        <div class="info-box theory">
+          <div class="info-box-title"><i class="fas fa-scroll"></i> Theorem (ADMM Convergence)</div>
+          <p>
+            Assume $f$ and $g$ are closed, proper, convex functions, and the unaugmented Lagrangian 
+            $\mathcal{L}_0$ has a saddle point. Then ADMM satisfies:
+          </p>
+          <p style="margin-top: 12px;">
+            <strong>1. Residual convergence:</strong> $Ax^k + Bz^k - c \to 0$ as $k \to \infty$<br>
+            <strong>2. Objective convergence:</strong> $f(x^k) + g(z^k) \to p^*$ (optimal value)<br>
+            <strong>3. Dual convergence:</strong> $y^k \to y^*$ (optimal dual variable)
+          </p>
+        </div>
+
+        <h3>Convergence Rate</h3>
+        
+        <p>
+          For general convex problems, ADMM achieves an <strong>$O(1/k)$</strong> convergence rate, meaning 
+          the residuals decrease as $1/k$ after $k$ iterations. This can be improved under stronger assumptions:
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Problem Class</th>
+              <th>Convergence Rate</th>
+              <th>Conditions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>General convex</td>
+              <td>$O(1/k)$</td>
+              <td>f, g convex</td>
+            </tr>
+            <tr>
+              <td>Strongly convex</td>
+              <td>$O(\gamma^k)$ (linear)</td>
+              <td>f or g strongly convex</td>
+            </tr>
+            <tr>
+              <td>Smooth + strongly convex</td>
+              <td>$O(\gamma^k)$ (linear)</td>
+              <td>Accelerated variants</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Stopping Criteria</h3>
+        
+        <p>
+          In practice, we monitor two residuals to decide when to stop:
+        </p>
+
+        <div class="math-block">
+          $$r^k = Ax^k + Bz^k - c \quad \text{(primal residual)}$$
+          $$s^k = \rho A^T B(z^k - z^{k-1}) \quad \text{(dual residual)}$$
+        </div>
+
+        <p>
+          Stop when both $\|r^k\|_2 \leq \epsilon^{\text{pri}}$ and $\|s^k\|_2 \leq \epsilon^{\text{dual}}$.
+        </p>
+
+        <!-- Implementation -->
+        <h2 id="implementation">6. Python Implementation</h2>
+        
+        <p>
+          Let's implement consensus ADMM for distributed logistic regression. This is a common use case 
+          in federated learning and privacy-preserving ML.
+        </p>
+
+        <h3>Basic ADMM Solver</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">admm_core.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">from</span> typing <span class="keyword">import</span> Callable, Tuple, List
+
+<span class="keyword">class</span> <span class="type">ADMMSolver</span>:
+    <span class="string">"""Generic ADMM solver for consensus optimization."""</span>
+    
+    <span class="keyword">def</span> <span class="function">__init__</span>(
+        <span class="param">self</span>,
+        n_features: <span class="type">int</span>,
+        n_workers: <span class="type">int</span>,
+        rho: <span class="type">float</span> = <span class="number">1.0</span>,
+        max_iter: <span class="type">int</span> = <span class="number">100</span>,
+        tol: <span class="type">float</span> = <span class="number">1e-4</span>
+    ):
+        <span class="param">self</span>.n_features = n_features
+        <span class="param">self</span>.n_workers = n_workers
+        <span class="param">self</span>.rho = rho
+        <span class="param">self</span>.max_iter = max_iter
+        <span class="param">self</span>.tol = tol
+        
+        <span class="comment"># Initialize variables</span>
+        <span class="param">self</span>.z = np.zeros(n_features)  <span class="comment"># Global consensus</span>
+        <span class="param">self</span>.theta = [np.zeros(n_features) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="builtin">range</span>(n_workers)]
+        <span class="param">self</span>.u = [np.zeros(n_features) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="builtin">range</span>(n_workers)]
+        
+        <span class="param">self</span>.history = {<span class="string">'primal_residual'</span>: [], <span class="string">'dual_residual'</span>: []}
+    
+    <span class="keyword">def</span> <span class="function">local_update</span>(
+        <span class="param">self</span>, 
+        worker_id: <span class="type">int</span>, 
+        local_solver: Callable
+    ) -> np.ndarray:
+        <span class="string">"""
+        Perform local θ-update for a single worker.
+        
+        local_solver should minimize: f_i(θ) + (ρ/2)||θ - z + u||²
+        """</span>
+        target = <span class="param">self</span>.z - <span class="param">self</span>.u[worker_id]
+        <span class="param">self</span>.theta[worker_id] = local_solver(target, <span class="param">self</span>.rho)
+        <span class="keyword">return</span> <span class="param">self</span>.theta[worker_id]
+    
+    <span class="keyword">def</span> <span class="function">global_update</span>(<span class="param">self</span>, regularizer: Callable = <span class="keyword">None</span>):
+        <span class="string">"""
+        Perform global z-update (consensus averaging).
+        
+        z = (1/N) Σ(θᵢ + uᵢ)  [+ proximal step if regularizer]
+        """</span>
+        z_old = <span class="param">self</span>.z.copy()
+        
+        <span class="comment"># Average of (θ + u) across workers</span>
+        <span class="param">self</span>.z = np.mean([
+            <span class="param">self</span>.theta[i] + <span class="param">self</span>.u[i] 
+            <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(<span class="param">self</span>.n_workers)
+        ], axis=<span class="number">0</span>)
+        
+        <span class="comment"># Apply proximal operator for regularization</span>
+        <span class="keyword">if</span> regularizer <span class="keyword">is not</span> <span class="keyword">None</span>:
+            <span class="param">self</span>.z = regularizer(<span class="param">self</span>.z, <span class="param">self</span>.rho * <span class="param">self</span>.n_workers)
+        
+        <span class="keyword">return</span> z_old
+    
+    <span class="keyword">def</span> <span class="function">dual_update</span>(<span class="param">self</span>):
+        <span class="string">"""Update dual variables for all workers."""</span>
+        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(<span class="param">self</span>.n_workers):
+            <span class="param">self</span>.u[i] = <span class="param">self</span>.u[i] + <span class="param">self</span>.theta[i] - <span class="param">self</span>.z
+    
+    <span class="keyword">def</span> <span class="function">compute_residuals</span>(<span class="param">self</span>, z_old: np.ndarray) -> Tuple[<span class="type">float</span>, <span class="type">float</span>]:
+        <span class="string">"""Compute primal and dual residuals."""</span>
+        <span class="comment"># Primal residual: ||θᵢ - z||</span>
+        primal = np.sqrt(<span class="builtin">sum</span>(
+            np.sum((<span class="param">self</span>.theta[i] - <span class="param">self</span>.z)**<span class="number">2</span>) 
+            <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(<span class="param">self</span>.n_workers)
+        ))
+        
+        <span class="comment"># Dual residual: ρ||z - z_old||</span>
+        dual = <span class="param">self</span>.rho * np.sqrt(<span class="param">self</span>.n_workers) * np.linalg.norm(<span class="param">self</span>.z - z_old)
+        
+        <span class="keyword">return</span> primal, dual
+    
+    <span class="keyword">def</span> <span class="function">converged</span>(<span class="param">self</span>, primal: <span class="type">float</span>, dual: <span class="type">float</span>) -> <span class="type">bool</span>:
+        <span class="string">"""Check convergence criteria."""</span>
+        <span class="keyword">return</span> primal < <span class="param">self</span>.tol <span class="keyword">and</span> dual < <span class="param">self</span>.tol</code></pre>
+        </div>
+
+        <h3>Distributed Logistic Regression</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">admm_logistic.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">from</span> scipy.optimize <span class="keyword">import</span> minimize
+
+<span class="keyword">def</span> <span class="function">logistic_loss</span>(theta, X, y, target, rho):
+    <span class="string">"""
+    Logistic loss + ADMM proximal term.
+    
+    L(θ) = Σ log(1 + exp(-yᵢ·xᵢᵀθ)) + (ρ/2)||θ - target||²
+    """</span>
+    n = X.shape[<span class="number">0</span>]
+    logits = y * (X @ theta)
+    
+    <span class="comment"># Numerically stable log-sum-exp</span>
+    log_loss = np.mean(np.logaddexp(<span class="number">0</span>, -logits))
+    
+    <span class="comment"># ADMM proximal term</span>
+    proximal = (rho / <span class="number">2</span>) * np.sum((theta - target)**<span class="number">2</span>)
+    
+    <span class="keyword">return</span> log_loss + proximal
+
+<span class="keyword">def</span> <span class="function">logistic_gradient</span>(theta, X, y, target, rho):
+    <span class="string">"""Gradient of logistic loss + proximal term."""</span>
+    n = X.shape[<span class="number">0</span>]
+    logits = y * (X @ theta)
+    probs = <span class="number">1</span> / (<span class="number">1</span> + np.exp(logits))  <span class="comment"># σ(-y·xᵀθ)</span>
+    
+    grad_loss = -X.T @ (y * probs) / n
+    grad_proximal = rho * (theta - target)
+    
+    <span class="keyword">return</span> grad_loss + grad_proximal
+
+<span class="keyword">def</span> <span class="function">local_logistic_solver</span>(X, y):
+    <span class="string">"""
+    Returns a solver function for local logistic regression.
+    """</span>
+    <span class="keyword">def</span> <span class="function">solver</span>(target, rho):
+        result = minimize(
+            logistic_loss,
+            x0=target,  <span class="comment"># Warm start</span>
+            args=(X, y, target, rho),
+            jac=logistic_gradient,
+            method=<span class="string">'L-BFGS-B'</span>,
+            options={<span class="string">'maxiter'</span>: <span class="number">50</span>}
+        )
+        <span class="keyword">return</span> result.x
+    <span class="keyword">return</span> solver
+
+<span class="keyword">def</span> <span class="function">l1_proximal</span>(z, lambd):
+    <span class="string">"""Proximal operator for L1 regularization (soft thresholding)."""</span>
+    <span class="keyword">return</span> np.sign(z) * np.maximum(np.abs(z) - lambd, <span class="number">0</span>)
+
+<span class="keyword">def</span> <span class="function">l2_proximal</span>(z, lambd):
+    <span class="string">"""Proximal operator for L2 regularization."""</span>
+    <span class="keyword">return</span> z / (<span class="number">1</span> + lambd)</code></pre>
+        </div>
+
+        <h3>Full Training Loop</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">train_distributed.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">from</span> admm_core <span class="keyword">import</span> ADMMSolver
+<span class="keyword">from</span> admm_logistic <span class="keyword">import</span> local_logistic_solver, l1_proximal
+
+<span class="keyword">def</span> <span class="function">train_distributed_logistic</span>(
+    X_splits: List[np.ndarray],
+    y_splits: List[np.ndarray],
+    lambda_l1: <span class="type">float</span> = <span class="number">0.01</span>,
+    rho: <span class="type">float</span> = <span class="number">1.0</span>,
+    max_iter: <span class="type">int</span> = <span class="number">100</span>,
+    verbose: <span class="type">bool</span> = <span class="keyword">True</span>
+):
+    <span class="string">"""
+    Train logistic regression using consensus ADMM.
+    
+    Args:
+        X_splits: List of feature matrices, one per worker
+        y_splits: List of label vectors, one per worker
+        lambda_l1: L1 regularization strength
+        rho: ADMM penalty parameter
+    """</span>
+    n_workers = <span class="builtin">len</span>(X_splits)
+    n_features = X_splits[<span class="number">0</span>].shape[<span class="number">1</span>]
+    
+    <span class="comment"># Initialize solver</span>
+    solver = ADMMSolver(
+        n_features=n_features,
+        n_workers=n_workers,
+        rho=rho,
+        max_iter=max_iter
+    )
+    
+    <span class="comment"># Create local solvers for each worker</span>
+    local_solvers = [
+        local_logistic_solver(X_splits[i], y_splits[i])
+        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(n_workers)
+    ]
+    
+    <span class="comment"># L1 regularization proximal operator</span>
+    <span class="keyword">def</span> <span class="function">regularizer</span>(z, scale):
+        <span class="keyword">return</span> l1_proximal(z, lambda_l1 / scale)
+    
+    <span class="comment"># ADMM iterations</span>
+    <span class="keyword">for</span> k <span class="keyword">in</span> <span class="builtin">range</span>(max_iter):
+        <span class="comment"># 1. Local updates (can be parallelized!)</span>
+        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(n_workers):
+            solver.local_update(i, local_solvers[i])
+        
+        <span class="comment"># 2. Global update with regularization</span>
+        z_old = solver.global_update(regularizer)
+        
+        <span class="comment"># 3. Dual update</span>
+        solver.dual_update()
+        
+        <span class="comment"># 4. Check convergence</span>
+        primal, dual = solver.compute_residuals(z_old)
+        solver.history[<span class="string">'primal_residual'</span>].append(primal)
+        solver.history[<span class="string">'dual_residual'</span>].append(dual)
+        
+        <span class="keyword">if</span> verbose <span class="keyword">and</span> k % <span class="number">10</span> == <span class="number">0</span>:
+            <span class="builtin">print</span>(<span class="string">f"Iter {k:3d}: primal={primal:.6f}, dual={dual:.6f}"</span>)
+        
+        <span class="keyword">if</span> solver.converged(primal, dual):
+            <span class="builtin">print</span>(<span class="string">f"Converged at iteration {k}"</span>)
+            <span class="keyword">break</span>
+    
+    <span class="keyword">return</span> solver.z, solver.history
+
+<span class="comment"># Example usage</span>
+<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:
+    <span class="comment"># Generate synthetic data</span>
+    np.random.seed(<span class="number">42</span>)
+    n_samples, n_features = <span class="number">10000</span>, <span class="number">50</span>
+    n_workers = <span class="number">4</span>
+    
+    X = np.random.randn(n_samples, n_features)
+    true_theta = np.random.randn(n_features)
+    y = np.sign(X @ true_theta + <span class="number">0.1</span> * np.random.randn(n_samples))
+    
+    <span class="comment"># Split data across workers</span>
+    split_size = n_samples // n_workers
+    X_splits = [X[i*split_size:(i+<span class="number">1</span>)*split_size] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(n_workers)]
+    y_splits = [y[i*split_size:(i+<span class="number">1</span>)*split_size] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(n_workers)]
+    
+    <span class="comment"># Train!</span>
+    theta, history = train_distributed_logistic(
+        X_splits, y_splits,
+        lambda_l1=<span class="number">0.01</span>,
+        rho=<span class="number">1.0</span>
+    )</code></pre>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Choosing ρ</div>
+          <p>
+            The penalty parameter $\rho$ significantly affects convergence. Too small → slow convergence; 
+            too large → numerical instability. A common heuristic: start with $\rho = 1$ and use 
+            <strong>adaptive ρ adjustment</strong> based on residual ratios.
+          </p>
+        </div>
+
+        <!-- Applications -->
+        <h2 id="applications">7. Applications & Examples</h2>
+        
+        <p>
+          ADMM's flexibility makes it applicable to many machine learning problems. Here are some common applications:
+        </p>
+
+        <h3>1. LASSO Regression</h3>
+        
+        <p>
+          The classic sparse regression problem with L1 penalty:
+        </p>
+
+        <div class="math-block">
+          $$\min_\theta \frac{1}{2}\|X\theta - y\|_2^2 + \lambda\|\theta\|_1$$
+        </div>
+
+        <p>
+          ADMM formulation: split into $f(\theta) = \frac{1}{2}\|X\theta - y\|_2^2$ and $g(z) = \lambda\|z\|_1$, 
+          with constraint $\theta = z$. The z-update becomes soft thresholding!
+        </p>
+
+        <h3>2. Federated Learning</h3>
+        
+        <p>
+          Train a global model across devices without centralizing data:
+        </p>
+
+        <ul>
+          <li>Each device keeps its data locally (privacy)</li>
+          <li>Devices send only model updates to server</li>
+          <li>ADMM ensures consensus on the global model</li>
+        </ul>
+
+        <h3>3. Constrained Deep Learning</h3>
+        
+        <p>
+          Enforce constraints on neural network weights:
+        </p>
+
+        <ul>
+          <li><strong>Weight bounds:</strong> $\|W\|_\infty \leq c$ (robustness)</li>
+          <li><strong>Sparsity:</strong> Prune weights during training</li>
+          <li><strong>Low-rank:</strong> Compress layers via nuclear norm</li>
+        </ul>
+
+        <h3>Comparison with Other Methods</h3>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Communication</th>
+              <th>Convergence</th>
+              <th>Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>ADMM</strong></td>
+              <td>O(d) per iter</td>
+              <td>O(1/k)</td>
+              <td>Constrained, sparse, distributed</td>
+            </tr>
+            <tr>
+              <td><strong>SGD</strong></td>
+              <td>O(d) per iter</td>
+              <td>O(1/√k)</td>
+              <td>Large-scale deep learning</td>
+            </tr>
+            <tr>
+              <td><strong>FedAvg</strong></td>
+              <td>O(d) per round</td>
+              <td>Varies</td>
+              <td>Federated, non-iid data</td>
+            </tr>
+            <tr>
+              <td><strong>CoCoA</strong></td>
+              <td>O(d) per iter</td>
+              <td>O(1/k)</td>
+              <td>Dual methods, kernels</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Summary -->
+        <h2 id="summary">8. Summary & Further Reading</h2>
+        
+        <p>
+          ADMM is a powerful tool for distributed optimization that combines the benefits of 
+          decomposition methods with the convergence guarantees of augmented Lagrangian approaches.
+        </p>
+
+        <h3>Key Takeaways</h3>
+        
+        <ul>
+          <li><strong>Flexibility:</strong> Handle constraints, regularizers, and distributed data naturally</li>
+          <li><strong>Convergence:</strong> Guaranteed O(1/k) rate for convex problems, often faster in practice</li>
+          <li><strong>Parallelization:</strong> Local updates are embarrassingly parallel</li>
+          <li><strong>Communication:</strong> Only requires exchanging model parameters, not gradients</li>
+        </ul>
+
+        <h3>When to Use ADMM</h3>
+        
+        <ul>
+          <li>Problems with natural decomposition structure</li>
+          <li>Constraints that are easy to handle separately</li>
+          <li>Distributed settings with moderate communication costs</li>
+          <li>When convergence guarantees matter</li>
+        </ul>
+
+        <h3>Further Reading</h3>
+        
+        <ul>
+          <li><strong>Boyd et al. (2011)</strong> - "Distributed Optimization and Statistical Learning via ADMM" - The definitive survey</li>
+          <li><strong>Parikh & Boyd (2014)</strong> - "Proximal Algorithms" - Deep dive into proximal operators</li>
+          <li><strong>Zhang & Kwok (2014)</strong> - "Asynchronous Distributed ADMM" - Handling stragglers</li>
+          <li><strong>Hong et al. (2016)</strong> - "Convergence Analysis of ADMM" - Theoretical foundations</li>
+        </ul>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-rocket"></i> Next Steps</div>
+          <p>
+            Try implementing ADMM for your own distributed ML problem! Start with the consensus formulation, 
+            and experiment with different ρ values. For production systems, consider asynchronous variants 
+            that handle heterogeneous workers and network delays.
+          </p>
+        </div>
+
+        <!-- Post Footer -->
+        <div class="post-footer">
+          <div class="author-card">
+            <div class="author-avatar">AO</div>
+            <div class="author-info">
+              <h4>Alireza Olama</h4>
+              <p>Postdoctoral researcher specializing in distributed optimization and large-scale machine learning. My research focuses on efficient algorithms for training foundation models.</p>
+            </div>
+          </div>
+          
+          <div class="post-navigation">
+            <a href="pytorch-ddp-vs-fsdp.html" class="post-nav-link prev">
+              <div class="label"><i class="fas fa-arrow-left"></i> Previous</div>
+              <div class="title">PyTorch DDP vs FSDP</div>
+            </a>
+            <a href="ai-cluster-architectures.html" class="post-nav-link next">
+              <div class="label">Next <i class="fas fa-arrow-right"></i></div>
+              <div class="title">AI Cluster Architectures</div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- Theme Toggle Script -->
+    <script>
+      function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        const icon = document.querySelector('.theme-toggle i');
+        icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+      }
+      
+      // Check for saved theme preference
+      if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+      }
+      
+      // Smooth scroll for TOC links
+      document.querySelectorAll('.toc a').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = document.querySelector(link.getAttribute('href'));
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    </script>
+  </body>
+</html>
