@@ -604,3 +604,133 @@ main {
     text-align: center;
   }
 }
+
+/* Theme Toggle Button */
+.theme-toggle {
+  background: var(--surface);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1.1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+
+.theme-toggle:hover {
+  background: var(--accent);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --surface: #1e293b;
+  --surface-alt: #0f172a;
+  --surface-dark: #0f172a;
+  --highlight: #1e3a5f;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+body.dark-mode .hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a5f 100%);
+}
+
+body.dark-mode .panel {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .hero-card {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .contact-card {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .profile-link {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .social-links a {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .theme-toggle {
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+body.dark-mode .button.ghost {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+body.dark-mode .button.ghost:hover {
+  background: var(--ink);
+  color: var(--surface-dark);
+}
+
+body.dark-mode .pub-list article {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+body.dark-mode .pill-list li {
+  background: var(--highlight);
+  color: var(--accent-light);
+}
+
+body.dark-mode .software-tags span {
+  background: var(--highlight);
+  color: var(--accent-light);
+}
+
+body.dark-mode .footer {
+  background: #0f172a;
+}
+
+body.dark-mode .footer-links a {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .logo {
+  background: var(--accent);
+}
+
+body.dark-mode a.software-panel:hover {
+  border-color: var(--accent);
+}
+
+/* Software panel as link */
+a.software-panel {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+a.software-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+}
+
+a.software-panel h3 {
+  color: var(--ink);
+}
