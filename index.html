@@ -33,6 +33,9 @@
   </head>
   <body>
     <header class="hero">
+      <!-- Particle Network Background -->
+      <canvas id="particles"></canvas>
+      
       <nav class="nav">
         <div class="logo">AO</div>
         <button class="hamburger" onclick="toggleMenu()" aria-label="Toggle menu">
@@ -43,6 +46,7 @@
         <div class="nav-links">
           <a href="#news">News</a>
           <a href="#about">About</a>
+          <a href="#skills">Skills</a>
           <a href="#research">Research</a>
           <a href="#publications">Publications</a>
           <a href="#teaching">Teaching</a>
@@ -56,23 +60,21 @@
       <div class="hero-content">
         <div class="hero-text">
           <p class="eyebrow">Postdoctoral Researcher</p>
-          <h1>Alireza Olama</h1>
+          <h1 class="glitch-text">Alireza Olama</h1>
           <p class="subtitle">
             Information Technology Department<br />
             Faculty of Science and Engineering<br />
             <strong>Åbo Akademi University</strong>, Vaasa, Finland
           </p>
-          <p class="lead">
-            I design machine learning systems for energy-efficient training and inference
-            of large-scale models, integrating high-performance distributed systems,
-            sparsity-aware optimization, and hardware–software co-design.
+          <p class="typing-container">
+            <span class="typing-text"></span><span class="cursor">|</span>
           </p>
           <div class="hero-cta">
             <a class="button primary" href="#publications">Publications</a>
             <a class="button ghost" href="#contact">Contact Me</a>
           </div>
           <div class="social-links">
-            <a href="https://scholar.google.com/citations?user=YOUR_ID" target="_blank" rel="noreferrer" title="Google Scholar"><i class="fas fa-graduation-cap"></i></a>
+            <a href="https://scholar.google.com/citations?user=km4oc50AAAAJ&hl=en" target="_blank" rel="noreferrer" title="Google Scholar"><i class="fas fa-graduation-cap"></i></a>
             <a href="https://github.com/alirezalm" target="_blank" rel="noreferrer" title="GitHub"><i class="fab fa-github"></i></a>
             <a href="https://www.linkedin.com/in/alireza-olama-213a6a107/" target="_blank" rel="noreferrer" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
             <a href="https://www.youtube.com/@HPC4AI" target="_blank" rel="noreferrer" title="HPC4AI YouTube"><i class="fab fa-youtube"></i></a>
@@ -101,7 +103,29 @@
     </header>
 
     <main>
-      <section id="news" class="section">
+      <!-- Stats Counter Section -->
+      <section class="stats-section">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-number" data-target="15">0</span>
+            <span class="stat-label">Publications</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" data-target="7">0</span>
+            <span class="stat-label">Supervised Theses</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" data-target="4">0</span>
+            <span class="stat-label">Countries Collaborated</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" data-target="3">0</span>
+            <span class="stat-label">Open-Source Tools</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="news" class="section fade-in">
         <div class="section-title">
           <h2>News & Updates</h2>
           <p>Recent activities, publications, and announcements.</p>
@@ -138,7 +162,7 @@
         </div>
       </section>
 
-      <section id="about" class="section alt">
+      <section id="about" class="section alt fade-in">
         <div class="section-title">
           <h2>About Me</h2>
           <p>
@@ -178,7 +202,264 @@
         </div>
       </section>
 
-      <section id="research" class="section">
+      <!-- Technical Skills Section -->
+      <section id="skills" class="section fade-in">
+        <div class="section-title">
+          <h2>Technical Skills</h2>
+          <p>
+            Deep expertise in high-performance computing, distributed systems, and ML infrastructure
+            for building scalable, energy-efficient AI systems.
+          </p>
+        </div>
+        
+        <div class="skills-container">
+          <!-- Programming Languages -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-code"></i>
+              <h3>Programming Languages</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fab fa-python"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Python</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-microchip"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">C/C++</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-bolt"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">CUDA</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="50">
+                <div class="skill-icon"><i class="fas fa-fire"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">HIP</span>
+                  <span class="skill-level">Basic</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-terminal"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Bash</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI & Machine Learning -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-brain"></i>
+              <h3>AI & Machine Learning</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fas fa-fire-flame-curved"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">PyTorch</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-network-wired"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Distributed PyTorch (DDP/FSDP)</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-gauge-high"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Mixed-Precision Training (AMP)</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Distributed Computing & HPC -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-server"></i>
+              <h3>Distributed Computing & HPC</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Slurm</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-cubes"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Multi-Node, Multi-GPU Training</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-arrows-split-up-and-left"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">NCCL, MPI, OpenMP</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Inference & Performance -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-rocket"></i>
+              <h3>AI Inference & Performance</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="50">
+                <div class="skill-icon"><i class="fas fa-diagram-project"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">ONNX & TensorRT</span>
+                  <span class="skill-level">Basic</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fas fa-scissors"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Pruning (Structured, N:M)</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-compress"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Quantization</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="50">
+                <div class="skill-icon"><i class="fas fa-gears"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">TVM & ML Compilers</span>
+                  <span class="skill-level">Basic</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GPU Kernel Optimization -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-microchip"></i>
+              <h3>GPU Kernel Optimization</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-memory"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Memory Hierarchy Optimization</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Nsight Systems / Nsight Compute</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-magnifying-glass-chart"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Roofline & Bottleneck Analysis</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="90">
+                <div class="skill-icon"><i class="fas fa-puzzle-piece"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Custom CUDA Kernels (PyTorch C++)</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Software Engineering & Infrastructure -->
+          <div class="skill-category">
+            <div class="skill-category-header">
+              <i class="fas fa-wrench"></i>
+              <h3>Software Engineering</h3>
+            </div>
+            <div class="skill-items">
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fab fa-git-alt"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Git / GitHub</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="50">
+                <div class="skill-icon"><i class="fab fa-docker"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Docker</span>
+                  <span class="skill-level">Basic</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="50">
+                <div class="skill-icon"><i class="fas fa-infinity"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">CI/CD</span>
+                  <span class="skill-level">Basic</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+              <div class="skill-item" data-level="95">
+                <div class="skill-icon"><i class="fab fa-linux"></i></div>
+                <div class="skill-info">
+                  <span class="skill-name">Linux & HPC Ecosystems</span>
+                  <span class="skill-level">Proficient</span>
+                </div>
+                <div class="skill-bar"><div class="skill-progress"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="research" class="section alt fade-in">
         <div class="section-title">
           <h2>Research</h2>
           <p>
@@ -225,7 +506,7 @@
         </div>
       </section>
 
-      <section id="publications" class="section alt">
+      <section id="publications" class="section alt fade-in">
         <div class="section-title">
           <h2>Selected Publications</h2>
           <p>
@@ -279,7 +560,7 @@
         </div>
       </section>
 
-      <section id="teaching" class="section">
+      <section id="teaching" class="section fade-in">
         <div class="section-title">
           <h2>Teaching</h2>
           <p>
@@ -307,7 +588,7 @@
         </div>
       </section>
 
-      <section id="software" class="section alt">
+      <section id="software" class="section alt fade-in">
         <div class="section-title">
           <h2>Open-Source Software</h2>
           <p>
@@ -361,7 +642,7 @@
         </div>
       </section>
 
-      <section id="contact" class="section">
+      <section id="contact" class="section fade-in">
         <div class="section-title">
           <h2>Get in Touch</h2>
           <p>Open to collaboration on energy-efficient ML systems, distributed training, and HPC research.</p>
@@ -390,7 +671,7 @@
           </div>
         </div>
         <div class="profile-links">
-          <a href="https://scholar.google.com/citations?user=YOUR_ID" target="_blank" rel="noreferrer" class="profile-link">
+          <a href="https://scholar.google.com/citations?user=km4oc50AAAAJ&hl=en" target="_blank" rel="noreferrer" class="profile-link">
             <i class="fas fa-graduation-cap"></i> Google Scholar
           </a>
           <a href="https://github.com/alirezalm" target="_blank" rel="noreferrer" class="profile-link">
@@ -430,7 +711,305 @@
     </button>
 
     <script>
-      // Theme Toggle
+      // ============================================
+      // PARTICLE NETWORK BACKGROUND (Mouse Interactive)
+      // ============================================
+      const canvas = document.getElementById('particles');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      let animationId;
+      
+      // Mouse tracking
+      const mouse = {
+        x: null,
+        y: null,
+        radius: 150 // Interaction radius
+      };
+
+      function resizeCanvas() {
+        const hero = document.querySelector('.hero');
+        canvas.width = hero.offsetWidth;
+        canvas.height = hero.offsetHeight;
+      }
+
+      class Particle {
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.baseX = this.x;
+          this.baseY = this.y;
+          this.vx = (Math.random() - 0.5) * 0.5;
+          this.vy = (Math.random() - 0.5) * 0.5;
+          this.radius = Math.random() * 2 + 1;
+          this.density = (Math.random() * 30) + 1;
+        }
+
+        update() {
+          // Mouse interaction - particles are attracted to cursor
+          if (mouse.x !== null && mouse.y !== null) {
+            const dx = mouse.x - this.x;
+            const dy = mouse.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < mouse.radius) {
+              // Calculate force direction and strength
+              const forceDirectionX = dx / distance;
+              const forceDirectionY = dy / distance;
+              const force = (mouse.radius - distance) / mouse.radius;
+              
+              // Attract particles toward cursor
+              const directionX = forceDirectionX * force * this.density * 0.2;
+              const directionY = forceDirectionY * force * this.density * 0.2;
+              
+              this.x += directionX;
+              this.y += directionY;
+            }
+          }
+          
+          // Normal movement
+          this.x += this.vx;
+          this.y += this.vy;
+
+          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fillStyle = document.body.classList.contains('dark-mode') 
+            ? 'rgba(129, 140, 248, 0.5)' 
+            : 'rgba(79, 70, 229, 0.3)';
+          ctx.fill();
+        }
+      }
+
+      function initParticles() {
+        particles = [];
+        const particleCount = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
+        for (let i = 0; i < particleCount; i++) {
+          particles.push(new Particle());
+        }
+      }
+
+      function connectParticles() {
+        const maxDistance = 150;
+        const isDark = document.body.classList.contains('dark-mode');
+        
+        for (let i = 0; i < particles.length; i++) {
+          // Connect particles to each other
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < maxDistance) {
+              const opacity = (1 - distance / maxDistance) * 0.4;
+              ctx.beginPath();
+              ctx.strokeStyle = isDark
+                ? `rgba(129, 140, 248, ${opacity})`
+                : `rgba(79, 70, 229, ${opacity})`;
+              ctx.lineWidth = 1;
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
+          }
+          
+          // Connect particles to mouse cursor
+          if (mouse.x !== null && mouse.y !== null) {
+            const dx = particles[i].x - mouse.x;
+            const dy = particles[i].y - mouse.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < mouse.radius) {
+              const opacity = (1 - distance / mouse.radius) * 0.6;
+              ctx.beginPath();
+              ctx.strokeStyle = isDark
+                ? `rgba(167, 139, 250, ${opacity})`
+                : `rgba(99, 102, 241, ${opacity})`;
+              ctx.lineWidth = 1.5;
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(mouse.x, mouse.y);
+              ctx.stroke();
+            }
+          }
+        }
+        
+        // Draw mouse cursor glow
+        if (mouse.x !== null && mouse.y !== null) {
+          ctx.beginPath();
+          ctx.arc(mouse.x, mouse.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = isDark
+            ? 'rgba(167, 139, 250, 0.8)'
+            : 'rgba(99, 102, 241, 0.6)';
+          ctx.fill();
+        }
+      }
+
+      function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(particle => {
+          particle.update();
+          particle.draw();
+        });
+        connectParticles();
+        animationId = requestAnimationFrame(animateParticles);
+      }
+
+      // Mouse event listeners
+      const hero = document.querySelector('.hero');
+      hero.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+      });
+      
+      hero.addEventListener('mouseleave', () => {
+        mouse.x = null;
+        mouse.y = null;
+      });
+
+      // Initialize particles
+      resizeCanvas();
+      initParticles();
+      animateParticles();
+
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        initParticles();
+      });
+
+      // ============================================
+      // TYPING EFFECT
+      // ============================================
+      const phrases = [
+        'Building Energy-Efficient ML Systems',
+        'Distributed Training at Scale',
+        'Sparsity-Aware Optimization',
+        'Hardware-Software Co-Design',
+        'High-Performance Computing',
+        'Federated & Decentralized Learning'
+      ];
+      let phraseIndex = 0;
+      let charIndex = 0;
+      let isDeleting = false;
+      const typingElement = document.querySelector('.typing-text');
+
+      function typeEffect() {
+        const currentPhrase = phrases[phraseIndex];
+        
+        if (isDeleting) {
+          typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
+          charIndex--;
+        } else {
+          typingElement.textContent = currentPhrase.substring(0, charIndex + 1);
+          charIndex++;
+        }
+
+        let typeSpeed = isDeleting ? 30 : 80;
+
+        if (!isDeleting && charIndex === currentPhrase.length) {
+          typeSpeed = 2000; // Pause at end
+          isDeleting = true;
+        } else if (isDeleting && charIndex === 0) {
+          isDeleting = false;
+          phraseIndex = (phraseIndex + 1) % phrases.length;
+          typeSpeed = 500;
+        }
+
+        setTimeout(typeEffect, typeSpeed);
+      }
+
+      typeEffect();
+
+      // ============================================
+      // COUNTER ANIMATION
+      // ============================================
+      function animateCounters() {
+        const counters = document.querySelectorAll('.stat-number');
+        const speed = 200;
+
+        counters.forEach(counter => {
+          const target = +counter.getAttribute('data-target');
+          const increment = target / speed;
+
+          const updateCount = () => {
+            const count = +counter.innerText;
+            if (count < target) {
+              counter.innerText = Math.ceil(count + increment);
+              setTimeout(updateCount, 10);
+            } else {
+              counter.innerText = target + '+';
+            }
+          };
+
+          updateCount();
+        });
+      }
+
+      // Trigger counters when stats section is in view
+      const statsSection = document.querySelector('.stats-section');
+      let counterAnimated = false;
+
+      const statsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !counterAnimated) {
+            animateCounters();
+            counterAnimated = true;
+          }
+        });
+      }, { threshold: 0.5 });
+
+      if (statsSection) statsObserver.observe(statsSection);
+
+      // ============================================
+      // SCROLL FADE-IN ANIMATIONS
+      // ============================================
+      const fadeElements = document.querySelectorAll('.fade-in');
+
+      const fadeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+      fadeElements.forEach(el => fadeObserver.observe(el));
+
+      // ============================================
+      // SKILL BAR ANIMATIONS
+      // ============================================
+      function animateSkillBars() {
+        const skillItems = document.querySelectorAll('.skill-item');
+        skillItems.forEach(item => {
+          const level = item.getAttribute('data-level');
+          const progressBar = item.querySelector('.skill-progress');
+          if (progressBar) {
+            progressBar.style.width = level + '%';
+          }
+        });
+      }
+
+      // Trigger skill bars when skills section is in view
+      const skillsSection = document.querySelector('#skills');
+      let skillsAnimated = false;
+
+      const skillsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !skillsAnimated) {
+            setTimeout(animateSkillBars, 300); // Small delay for visual effect
+            skillsAnimated = true;
+          }
+        });
+      }, { threshold: 0.2 });
+
+      if (skillsSection) skillsObserver.observe(skillsSection);
+
+      // ============================================
+      // THEME TOGGLE
+      // ============================================
       function toggleTheme() {
         const body = document.body;
         const icon = document.querySelector('.theme-toggle i');
@@ -453,12 +1032,16 @@
         const icon = document.querySelector('.theme-toggle i');
         if (savedTheme === 'dark') {
           document.body.classList.add('dark-mode');
-          icon.classList.remove('fa-moon');
-          icon.classList.add('fa-sun');
+          if (icon) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+          }
         }
       })();
 
-      // Mobile Menu Toggle
+      // ============================================
+      // MOBILE MENU TOGGLE
+      // ============================================
       function toggleMenu() {
         const navLinks = document.querySelector('.nav-links');
         const hamburger = document.querySelector('.hamburger');
@@ -474,7 +1057,9 @@
         });
       });
 
-      // Scroll to Top
+      // ============================================
+      // SCROLL TO TOP
+      // ============================================
       function scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -487,6 +1072,27 @@
         } else {
           scrollBtn.classList.remove('visible');
         }
+      });
+
+      // ============================================
+      // TILT EFFECT ON CARDS (hover)
+      // ============================================
+      document.querySelectorAll('.panel, .hero-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          const rotateX = (y - centerY) / 20;
+          const rotateY = (centerX - x) / 20;
+          
+          card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+        });
       });
     </script>
   </body>
