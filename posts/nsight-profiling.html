@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nsight Systems & Compute: Profiling Your CUDA Kernels | Alireza Olama</title>
+    <meta name="description" content="Learn to identify bottlenecks and optimize GPU kernels using NVIDIA's profiling tools" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- Base styles -->
+    <link rel="stylesheet" href="../styles.css" />
+    
+    <style>
+      /* Post-specific styles */
+      .post-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 16px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      body.dark-mode .post-nav {
+        background: rgba(15, 23, 42, 0.95);
+      }
+      
+      .post-nav-links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      
+      .post-nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+      }
+      
+      .post-nav-links a:hover {
+        color: var(--accent);
+      }
+      
+      .post-hero {
+        padding: 140px 32px 60px;
+        background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #db2777 100%);
+        color: white;
+      }
+      
+      .post-hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
+      .post-category {
+        display: inline-block;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+      }
+      
+      .post-hero h1 {
+        font-family: 'Fraunces', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1.2;
+      }
+      
+      .post-hero .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.9;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      
+      .post-meta {
+        display: flex;
+        gap: 24px;
+        font-size: 0.9rem;
+        opacity: 0.85;
+      }
+      
+      .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .post-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 60px 32px;
+      }
+      
+      .post-content h2 {
+        font-family: 'Fraunces', serif;
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 48px 0 24px;
+        color: var(--text-primary);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 8px;
+      }
+      
+      .post-content h3 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin: 36px 0 16px;
+        color: var(--text-primary);
+      }
+      
+      .post-content h4 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 28px 0 12px;
+        color: var(--text-primary);
+      }
+      
+      .post-content p {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 20px;
+        color: var(--text-secondary);
+      }
+      
+      .post-content ul, .post-content ol {
+        margin-bottom: 24px;
+        padding-left: 24px;
+      }
+      
+      .post-content li {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+      }
+      
+      /* Table of Contents */
+      .toc {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px 32px;
+        margin-bottom: 40px;
+        border-left: 4px solid var(--accent);
+      }
+      
+      .toc-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+      }
+      
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .toc li {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+      
+      .toc a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      
+      .toc a:hover {
+        color: var(--accent);
+      }
+      
+      /* Code blocks */
+      .code-block {
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 24px 0;
+        overflow: hidden;
+      }
+      
+      .code-header {
+        background: #334155;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .code-lang {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      
+      .code-filename {
+        color: #64748b;
+        font-size: 0.8rem;
+      }
+      
+      .code-block pre {
+        margin: 0;
+        padding: 20px;
+        overflow-x: auto;
+      }
+      
+      .code-block code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      
+      /* Syntax highlighting */
+      .keyword { color: #c792ea; }
+      .function { color: #82aaff; }
+      .string { color: #c3e88d; }
+      .number { color: #f78c6c; }
+      .comment { color: #546e7a; font-style: italic; }
+      .type { color: #ffcb6b; }
+      .builtin { color: #89ddff; }
+      .operator { color: #89ddff; }
+      
+      /* Diagrams */
+      .diagram-container {
+        margin: 32px 0;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px;
+        overflow-x: auto;
+      }
+      
+      .diagram-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+        text-align: center;
+      }
+      
+      .diagram-caption {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-top: 16px;
+        font-style: italic;
+      }
+      
+      /* Info boxes */
+      .info-box {
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
+      
+      .info-box.note {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+      }
+      
+      .info-box.warning {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+      }
+      
+      .info-box.tip {
+        background: #f0fdf4;
+        border-left: 4px solid #10b981;
+      }
+      
+      body.dark-mode .info-box.note {
+        background: rgba(59, 130, 246, 0.1);
+      }
+      
+      body.dark-mode .info-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+      }
+      
+      body.dark-mode .info-box.tip {
+        background: rgba(16, 185, 129, 0.1);
+      }
+      
+      .info-box-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .info-box.note .info-box-title { color: #2563eb; }
+      .info-box.warning .info-box-title { color: #d97706; }
+      .info-box.tip .info-box-title { color: #059669; }
+      
+      .info-box p {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      
+      /* Post navigation */
+      .post-navigation {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 60px;
+        padding-top: 40px;
+        border-top: 1px solid var(--border);
+      }
+      
+      .post-nav-item {
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .post-nav-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      .post-nav-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        display: block;
+      }
+      
+      .post-nav-title {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .post-nav-item.next {
+        text-align: right;
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .post-hero {
+          padding: 120px 20px 40px;
+        }
+        
+        .post-container {
+          padding: 40px 20px;
+        }
+        
+        .post-meta {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        
+        .post-navigation {
+          grid-template-columns: 1fr;
+        }
+        
+        .post-nav-item.next {
+          text-align: left;
+        }
+      }
+
+      /* Terminal output styling */
+      .terminal-output {
+        background: #0d1117;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 16px 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+        color: #c9d1d9;
+        overflow-x: auto;
+        border: 1px solid #30363d;
+      }
+
+      .terminal-output .prompt {
+        color: #58a6ff;
+      }
+
+      .terminal-output .output {
+        color: #8b949e;
+      }
+
+      /* Metric cards */
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+      }
+
+      .metric-card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid var(--border);
+      }
+
+      .metric-card .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 4px;
+      }
+
+      .metric-card .metric-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .metric-card.good .metric-value { color: #10b981; }
+      .metric-card.warning .metric-value { color: #f59e0b; }
+      .metric-card.bad .metric-value { color: #ef4444; }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="post-nav">
+      <a href="../index.html" class="logo" style="font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.5rem; color: var(--text-primary); text-decoration: none;">AO</a>
+      <div class="post-nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../blog.html">Blog</a>
+        <a href="../index.html#research">Research</a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="post-hero">
+      <div class="post-hero-content">
+        <span class="post-category"><i class="fas fa-bolt"></i> GPU Programming</span>
+        <h1>Nsight Systems & Compute: Profiling Your CUDA Kernels</h1>
+        <p class="subtitle">Master NVIDIA's profiling tools to identify bottlenecks, optimize memory access patterns, and achieve peak GPU performance.</p>
+        <div class="post-meta">
+          <span><i class="fas fa-calendar"></i> March 6, 2026</span>
+          <span><i class="fas fa-clock"></i> 25 min read</span>
+          <span><i class="fas fa-signal"></i> Intermediate</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Post Content -->
+    <article class="post-container">
+      <div class="post-content">
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <div class="toc-title">Table of Contents</div>
+          <ol>
+            <li><a href="#introduction">Why Profile GPU Code?</a></li>
+            <li><a href="#tools-overview">Nsight Systems vs Nsight Compute</a>
+              <ol style="margin-top: 8px;">
+                <li><a href="#when-to-use">When to Use Each Tool</a></li>
+              </ol>
+            </li>
+            <li><a href="#nsight-systems">Nsight Systems Deep Dive</a>
+              <ol style="margin-top: 8px;">
+                <li><a href="#nsys-cli">Command-Line Profiling</a></li>
+                <li><a href="#nsys-timeline">Reading the Timeline</a></li>
+                <li><a href="#nsys-api">NVTX Annotations</a></li>
+              </ol>
+            </li>
+            <li><a href="#nsight-compute">Nsight Compute Deep Dive</a>
+              <ol style="margin-top: 8px;">
+                <li><a href="#ncu-cli">Kernel Profiling</a></li>
+                <li><a href="#ncu-metrics">Key Metrics Explained</a></li>
+                <li><a href="#ncu-roofline">Roofline Analysis</a></li>
+              </ol>
+            </li>
+            <li><a href="#optimization-workflow">Optimization Workflow</a></li>
+            <li><a href="#case-study">Case Study: Optimizing Matrix Multiply</a></li>
+          </ol>
+        </div>
+
+        <!-- SECTION 1: Introduction -->
+        <h2 id="introduction">1. Why Profile GPU Code?</h2>
+
+        <p>Writing CUDA code that <em>works</em> is one thing. Writing CUDA code that achieves <strong>peak performance</strong> is another challenge entirely. Without profiling, you're optimizing blind.</p>
+
+        <p>Common performance issues that profiling reveals:</p>
+        <ul>
+          <li><strong>Memory bottlenecks:</strong> Uncoalesced access patterns, bank conflicts</li>
+          <li><strong>Low occupancy:</strong> Not enough threads to hide latency</li>
+          <li><strong>Kernel launch overhead:</strong> Too many small kernels</li>
+          <li><strong>Host-device synchronization:</strong> Hidden blocking calls</li>
+          <li><strong>Compute underutilization:</strong> Arithmetic intensity too low</li>
+        </ul>
+
+        <!-- Profiling importance visualization -->
+        <div class="diagram-container">
+          <div class="diagram-title">The GPU Performance Gap</div>
+          <svg viewBox="0 0 900 300" style="max-width: 100%;">
+            <!-- Theoretical peak -->
+            <rect x="50" y="50" width="700" height="40" fill="#3b82f6" opacity="0.3" rx="4"/>
+            <rect x="50" y="50" width="700" height="40" fill="url(#gradBlue)" rx="4"/>
+            <text x="400" y="75" style="font-size: 12px; font-weight: bold; fill: white;" text-anchor="middle">Theoretical Peak: 100 TFLOPS</text>
+            
+            <!-- Naive implementation -->
+            <rect x="50" y="110" width="140" height="40" fill="#ef4444" rx="4"/>
+            <text x="120" y="135" style="font-size: 11px; font-weight: bold; fill: white;" text-anchor="middle">Naive: 20%</text>
+            
+            <!-- After profiling -->
+            <rect x="50" y="170" width="560" height="40" fill="#10b981" rx="4"/>
+            <text x="330" y="195" style="font-size: 11px; font-weight: bold; fill: white;" text-anchor="middle">After Profiling & Optimization: 80%</text>
+            
+            <!-- Arrow showing improvement -->
+            <path d="M 200 130 Q 280 150 280 170" stroke="#f59e0b" stroke-width="3" fill="none" marker-end="url(#arrowYellow)"/>
+            <text x="300" y="155" style="font-size: 10px; fill: #f59e0b; font-weight: bold;">4x speedup!</text>
+            
+            <!-- Labels -->
+            <text x="770" y="75" style="font-size: 10px; fill: #475569;">H100 SXM</text>
+            <text x="200" y="135" style="font-size: 9px; fill: #fca5a5;">Memory bound, low occupancy</text>
+            <text x="620" y="195" style="font-size: 9px; fill: #86efac;">Optimized memory, high occupancy</text>
+            
+            <!-- Bottom note -->
+            <text x="400" y="260" style="font-size: 11px; fill: #475569; font-style: italic;" text-anchor="middle">"Without measurement, optimization is just guessing"</text>
+            
+            <defs>
+              <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#3b82f6"/>
+                <stop offset="100%" style="stop-color:#1d4ed8"/>
+              </linearGradient>
+              <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#f59e0b"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Profiling often reveals 2-5x improvement opportunities in CUDA code</div>
+        </div>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> Rule of Thumb</div>
+          <p>If your GPU utilization is below 70%, there's almost certainly a bottleneck that profiling can identify. Even at 90%, there may be optimization opportunities.</p>
+        </div>
+
+        <!-- SECTION 2: Tools Overview -->
+        <h2 id="tools-overview">2. Nsight Systems vs Nsight Compute</h2>
+
+        <p>NVIDIA provides two complementary profiling tools, each designed for different levels of analysis:</p>
+
+        <!-- Tools comparison diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Nsight Systems vs Nsight Compute</div>
+          <svg viewBox="0 0 900 400" style="max-width: 100%;">
+            <!-- Nsight Systems box -->
+            <rect x="50" y="40" width="380" height="320" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="240" y="75" style="font-size: 16px; font-weight: bold; fill: #92400e;" text-anchor="middle">Nsight Systems</text>
+            <text x="240" y="100" style="font-size: 11px; fill: #92400e; font-style: italic;" text-anchor="middle">"System-level profiler"</text>
+            
+            <!-- Systems features -->
+            <text x="70" y="135" style="font-size: 11px; fill: #78350f; font-weight: 600;">What it shows:</text>
+            <text x="70" y="160" style="font-size: 10px; fill: #78350f;">• CPU-GPU timeline visualization</text>
+            <text x="70" y="180" style="font-size: 10px; fill: #78350f;">• Kernel launch patterns</text>
+            <text x="70" y="200" style="font-size: 10px; fill: #78350f;">• Memory transfers (H2D, D2H)</text>
+            <text x="70" y="220" style="font-size: 10px; fill: #78350f;">• CUDA API calls</text>
+            <text x="70" y="240" style="font-size: 10px; fill: #78350f;">• Multi-GPU/multi-process</text>
+            
+            <text x="70" y="275" style="font-size: 11px; fill: #78350f; font-weight: 600;">Best for:</text>
+            <text x="70" y="300" style="font-size: 10px; fill: #78350f;">• Finding where time goes (big picture)</text>
+            <text x="70" y="320" style="font-size: 10px; fill: #78350f;">• Identifying CPU-GPU bottlenecks</text>
+            <text x="70" y="340" style="font-size: 10px; fill: #78350f;">• Understanding async/stream behavior</text>
+            
+            <!-- Nsight Compute box -->
+            <rect x="470" y="40" width="380" height="320" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="8"/>
+            <text x="660" y="75" style="font-size: 16px; font-weight: bold; fill: #1e40af;" text-anchor="middle">Nsight Compute</text>
+            <text x="660" y="100" style="font-size: 11px; fill: #1e40af; font-style: italic;" text-anchor="middle">"Kernel-level profiler"</text>
+            
+            <!-- Compute features -->
+            <text x="490" y="135" style="font-size: 11px; fill: #1e3a8a; font-weight: 600;">What it shows:</text>
+            <text x="490" y="160" style="font-size: 10px; fill: #1e3a8a;">• SM utilization & occupancy</text>
+            <text x="490" y="180" style="font-size: 10px; fill: #1e3a8a;">• Memory throughput (L1, L2, DRAM)</text>
+            <text x="490" y="200" style="font-size: 10px; fill: #1e3a8a;">• Warp stall reasons</text>
+            <text x="490" y="220" style="font-size: 10px; fill: #1e3a8a;">• Instruction mix (FP32, FP64, INT)</text>
+            <text x="490" y="240" style="font-size: 10px; fill: #1e3a8a;">• Roofline analysis</text>
+            
+            <text x="490" y="275" style="font-size: 11px; fill: #1e3a8a; font-weight: 600;">Best for:</text>
+            <text x="490" y="300" style="font-size: 10px; fill: #1e3a8a;">• Optimizing individual kernels</text>
+            <text x="490" y="320" style="font-size: 10px; fill: #1e3a8a;">• Understanding memory access patterns</text>
+            <text x="490" y="340" style="font-size: 10px; fill: #1e3a8a;">• Identifying compute vs memory bound</text>
+            
+            <!-- Workflow arrow -->
+            <path d="M 430 200 L 470 200" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray)"/>
+            <text x="450" y="185" style="font-size: 9px; fill: #475569; font-weight: bold;" text-anchor="middle">then</text>
+            
+            <defs>
+              <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#475569"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Use Nsight Systems first (find WHERE), then Nsight Compute (understand WHY)</div>
+        </div>
+
+        <h3 id="when-to-use">When to Use Each Tool</h3>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.95rem;">
+          <tr style="background: var(--bg-secondary);">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--accent);">Question</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--accent);">Tool</th>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px;">"Where is time being spent?"</td>
+            <td style="padding: 12px;"><strong>Nsight Systems</strong></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px;">"Why is this kernel slow?"</td>
+            <td style="padding: 12px;"><strong>Nsight Compute</strong></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px;">"Is my memory transfer overlapping with compute?"</td>
+            <td style="padding: 12px;"><strong>Nsight Systems</strong></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px;">"What's my memory bandwidth utilization?"</td>
+            <td style="padding: 12px;"><strong>Nsight Compute</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px;">"Is my application CPU or GPU bound?"</td>
+            <td style="padding: 12px;"><strong>Nsight Systems</strong></td>
+          </tr>
+        </table>
+
+        <!-- SECTION 3: Nsight Systems -->
+        <h2 id="nsight-systems">3. Nsight Systems Deep Dive</h2>
+
+        <p>Nsight Systems captures a timeline of your entire application, showing how CPU and GPU activities interleave. It's the best starting point for any optimization effort.</p>
+
+        <h3 id="nsys-cli">Command-Line Profiling</h3>
+
+        <p>Basic profiling with <code>nsys</code>:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Bash</span>
+            <span class="code-filename">profile_app.sh</span>
+          </div>
+          <pre><code><span class="comment"># Basic profile - generates .nsys-rep file</span>
+nsys profile --output=my_app_profile ./my_cuda_app
+
+<span class="comment"># Profile with specific options</span>
+nsys profile \
+  --trace=cuda,nvtx,osrt \          <span class="comment"># What to trace</span>
+  --sample=cpu \                     <span class="comment"># CPU sampling</span>
+  --cudabacktrace=all \              <span class="comment"># CUDA API backtraces</span>
+  --output=detailed_profile \
+  ./my_cuda_app
+
+<span class="comment"># Profile for specific duration</span>
+nsys profile --duration=10 ./my_cuda_app
+
+<span class="comment"># Profile with NVTX ranges (see below)</span>
+nsys profile --trace=cuda,nvtx ./my_cuda_app
+
+<span class="comment"># Generate stats summary</span>
+nsys stats my_app_profile.nsys-rep
+</code></pre>
+        </div>
+
+        <div class="terminal-output">
+<span class="prompt">$ nsys stats my_app_profile.nsys-rep</span>
+
+<span class="output">CUDA API Statistics:
+ Time(%)  Total Time (ns)  Num Calls    Avg (ns)   Name
+ -------  ---------------  ---------  -----------  ----------------
+    45.2      1,234,567,890      1,000   1,234,567   cudaLaunchKernel
+    32.1        876,543,210        100   8,765,432   cudaMemcpy
+    15.3        418,765,432         50   8,375,308   cudaDeviceSynchronize
+
+CUDA Kernel Statistics:
+ Time(%)  Total Time (ns)  Instances    Avg (ns)   Name
+ -------  ---------------  ---------  -----------  ----------------------------
+    78.4      2,345,678,901        500   4,691,357   matmul_kernel
+    15.2        456,789,012        500     913,578   relu_kernel
+     6.4        191,234,567        500     382,469   add_bias_kernel</span>
+        </div>
+
+        <h3 id="nsys-timeline">Reading the Timeline</h3>
+
+        <p>The timeline view is the most powerful feature. Here's how to interpret it:</p>
+
+        <!-- Timeline visualization -->
+        <div class="diagram-container">
+          <div class="diagram-title">Nsight Systems Timeline View</div>
+          <svg viewBox="0 0 900 450" style="max-width: 100%;">
+            <!-- Time axis -->
+            <line x1="100" y1="50" x2="850" y2="50" stroke="#334155" stroke-width="1"/>
+            <text x="100" y="40" style="font-size: 9px; fill: #475569;">0 ms</text>
+            <text x="300" y="40" style="font-size: 9px; fill: #475569;">50 ms</text>
+            <text x="500" y="40" style="font-size: 9px; fill: #475569;">100 ms</text>
+            <text x="700" y="40" style="font-size: 9px; fill: #475569;">150 ms</text>
+            <text x="850" y="40" style="font-size: 9px; fill: #475569;">200 ms</text>
+            
+            <!-- CPU Thread row -->
+            <text x="50" y="85" style="font-size: 10px; fill: #1e293b; font-weight: bold;">CPU</text>
+            <rect x="100" y="70" width="80" height="25" fill="#3b82f6" rx="2"/>
+            <text x="140" y="87" style="font-size: 8px; fill: white;" text-anchor="middle">prep data</text>
+            
+            <rect x="190" y="70" width="30" height="25" fill="#8b5cf6" rx="2"/>
+            <text x="205" y="87" style="font-size: 7px; fill: white;" text-anchor="middle">H2D</text>
+            
+            <rect x="400" y="70" width="30" height="25" fill="#8b5cf6" rx="2"/>
+            <text x="415" y="87" style="font-size: 7px; fill: white;" text-anchor="middle">D2H</text>
+            
+            <rect x="440" y="70" width="60" height="25" fill="#3b82f6" rx="2"/>
+            <text x="470" y="87" style="font-size: 8px; fill: white;" text-anchor="middle">process</text>
+            
+            <!-- CUDA API row -->
+            <text x="50" y="135" style="font-size: 10px; fill: #1e293b; font-weight: bold;">CUDA API</text>
+            <rect x="190" y="120" width="30" height="25" fill="#f59e0b" rx="2"/>
+            <rect x="230" y="120" width="20" height="25" fill="#10b981" rx="2"/>
+            <rect x="260" y="120" width="20" height="25" fill="#10b981" rx="2"/>
+            <rect x="290" y="120" width="20" height="25" fill="#10b981" rx="2"/>
+            <rect x="320" y="120" width="20" height="25" fill="#10b981" rx="2"/>
+            <rect x="350" y="120" width="40" height="25" fill="#ef4444" rx="2"/>
+            <text x="370" y="137" style="font-size: 7px; fill: white;" text-anchor="middle">sync</text>
+            
+            <!-- GPU row -->
+            <text x="50" y="185" style="font-size: 10px; fill: #1e293b; font-weight: bold;">GPU</text>
+            <rect x="200" y="170" width="40" height="25" fill="#f59e0b" rx="2"/>
+            <text x="220" y="187" style="font-size: 7px; fill: white;" text-anchor="middle">H2D</text>
+            
+            <rect x="250" y="170" width="80" height="25" fill="#10b981" rx="2"/>
+            <text x="290" y="187" style="font-size: 8px; fill: white;" text-anchor="middle">kernel 1</text>
+            
+            <rect x="340" y="170" width="30" height="25" fill="#10b981" rx="2"/>
+            <text x="355" y="187" style="font-size: 7px; fill: white;" text-anchor="middle">k2</text>
+            
+            <rect x="380" y="170" width="30" height="25" fill="#f59e0b" rx="2"/>
+            <text x="395" y="187" style="font-size: 7px; fill: white;" text-anchor="middle">D2H</text>
+            
+            <!-- Legend -->
+            <rect x="100" y="230" width="15" height="15" fill="#3b82f6" rx="2"/>
+            <text x="120" y="242" style="font-size: 9px; fill: #475569;">CPU work</text>
+            
+            <rect x="200" y="230" width="15" height="15" fill="#f59e0b" rx="2"/>
+            <text x="220" y="242" style="font-size: 9px; fill: #475569;">Memory transfer</text>
+            
+            <rect x="330" y="230" width="15" height="15" fill="#10b981" rx="2"/>
+            <text x="350" y="242" style="font-size: 9px; fill: #475569;">Kernel execution</text>
+            
+            <rect x="470" y="230" width="15" height="15" fill="#ef4444" rx="2"/>
+            <text x="490" y="242" style="font-size: 9px; fill: #475569;">Synchronization (blocking)</text>
+            
+            <!-- Problem indicators -->
+            <text x="450" y="290" style="font-size: 12px; font-weight: bold; fill: #1e293b;" text-anchor="middle">Common Problems to Look For:</text>
+            
+            <!-- Problem 1 -->
+            <rect x="100" y="310" width="200" height="50" fill="#fef2f2" stroke="#ef4444" stroke-width="1" rx="4"/>
+            <text x="200" y="330" style="font-size: 9px; fill: #991b1b; font-weight: bold;" text-anchor="middle">GPU Idle Time</text>
+            <text x="200" y="345" style="font-size: 8px; fill: #991b1b;" text-anchor="middle">Gaps between kernels = CPU overhead</text>
+            
+            <!-- Problem 2 -->
+            <rect x="320" y="310" width="200" height="50" fill="#fef2f2" stroke="#ef4444" stroke-width="1" rx="4"/>
+            <text x="420" y="330" style="font-size: 9px; fill: #991b1b; font-weight: bold;" text-anchor="middle">Blocking Syncs</text>
+            <text x="420" y="345" style="font-size: 8px; fill: #991b1b;" text-anchor="middle">Too many cudaDeviceSynchronize()</text>
+            
+            <!-- Problem 3 -->
+            <rect x="540" y="310" width="200" height="50" fill="#fef2f2" stroke="#ef4444" stroke-width="1" rx="4"/>
+            <text x="640" y="330" style="font-size: 9px; fill: #991b1b; font-weight: bold;" text-anchor="middle">Serial Transfers</text>
+            <text x="640" y="345" style="font-size: 8px; fill: #991b1b;" text-anchor="middle">H2D/D2H not overlapping compute</text>
+            
+            <!-- Good patterns -->
+            <text x="450" y="400" style="font-size: 12px; font-weight: bold; fill: #1e293b;" text-anchor="middle">What Good Looks Like:</text>
+            <text x="450" y="420" style="font-size: 10px; fill: #10b981;" text-anchor="middle">✓ GPU continuously busy  ✓ Overlapped transfers  ✓ Minimal sync gaps</text>
+          </svg>
+          <div class="diagram-caption">Timeline shows CPU-GPU coordination - look for gaps and blocking operations</div>
+        </div>
+
+        <h3 id="nsys-api">NVTX Annotations</h3>
+
+        <p>Add custom markers to your code for better timeline navigation:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">C++</span>
+            <span class="code-filename">nvtx_example.cu</span>
+          </div>
+          <pre><code><span class="keyword">#include</span> <span class="string">&lt;nvtx3/nvToolsExt.h&gt;</span>
+
+<span class="type">void</span> <span class="function">train_epoch</span>() {
+    <span class="comment">// Create a named range for this epoch</span>
+    nvtxRangePush(<span class="string">"Epoch"</span>);
+    
+    <span class="keyword">for</span> (<span class="type">int</span> batch = <span class="number">0</span>; batch < num_batches; batch++) {
+        <span class="comment">// Nested range for each phase</span>
+        nvtxRangePush(<span class="string">"Forward Pass"</span>);
+        forward<<<grid, block>>>(input, output);
+        nvtxRangePop();
+        
+        nvtxRangePush(<span class="string">"Backward Pass"</span>);
+        backward<<<grid, block>>>(grad_output, grad_input);
+        nvtxRangePop();
+        
+        nvtxRangePush(<span class="string">"Weight Update"</span>);
+        update_weights<<<grid, block>>>(weights, gradients, lr);
+        nvtxRangePop();
+    }
+    
+    nvtxRangePop();  <span class="comment">// End Epoch range</span>
+}
+
+<span class="comment">// Python with PyTorch</span>
+<span class="keyword">import</span> torch.cuda.nvtx <span class="keyword">as</span> nvtx
+
+<span class="keyword">with</span> nvtx.range(<span class="string">"training_loop"</span>):
+    <span class="keyword">for</span> batch <span class="keyword">in</span> dataloader:
+        <span class="keyword">with</span> nvtx.range(<span class="string">"forward"</span>):
+            output = model(batch)
+        <span class="keyword">with</span> nvtx.range(<span class="string">"backward"</span>):
+            loss.backward()
+</code></pre>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> Pro Tip</div>
+          <p>Use color-coded NVTX ranges: <code>nvtxRangePushA("Forward")</code> with different colors for different phases. Makes complex timelines much easier to read.</p>
+        </div>
+
+        <!-- SECTION 4: Nsight Compute -->
+        <h2 id="nsight-compute">4. Nsight Compute Deep Dive</h2>
+
+        <p>Once you've identified slow kernels with Nsight Systems, use Nsight Compute to understand <strong>why</strong> they're slow.</p>
+
+        <h3 id="ncu-cli">Kernel Profiling</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Bash</span>
+            <span class="code-filename">ncu_profile.sh</span>
+          </div>
+          <pre><code><span class="comment"># Profile all kernels (basic)</span>
+ncu --set full -o kernel_report ./my_cuda_app
+
+<span class="comment"># Profile specific kernel by name</span>
+ncu --kernel-name "matmul_kernel" --set full ./my_cuda_app
+
+<span class="comment"># Profile specific kernel launch (by index)</span>
+ncu --launch-skip 10 --launch-count 5 ./my_cuda_app
+
+<span class="comment"># Collect specific metrics</span>
+ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed \
+./my_cuda_app
+
+<span class="comment"># Generate CSV for analysis</span>
+ncu --csv --set full ./my_cuda_app > metrics.csv
+
+<span class="comment"># Compare two implementations</span>
+ncu --set full -o baseline ./my_app_v1
+ncu --set full -o optimized ./my_app_v2
+ncu --page raw --diff baseline.ncu-rep optimized.ncu-rep
+</code></pre>
+        </div>
+
+        <h3 id="ncu-metrics">Key Metrics Explained</h3>
+
+        <!-- Metrics visualization -->
+        <div class="diagram-container">
+          <div class="diagram-title">Critical Nsight Compute Metrics</div>
+          <svg viewBox="0 0 900 500" style="max-width: 100%;">
+            <!-- Compute metrics box -->
+            <rect x="50" y="30" width="380" height="200" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="8"/>
+            <text x="240" y="55" style="font-size: 13px; font-weight: bold; fill: #1e40af;" text-anchor="middle">Compute Metrics</text>
+            
+            <text x="70" y="85" style="font-size: 10px; fill: #1e3a8a; font-weight: 600;">sm__throughput.avg.pct_of_peak</text>
+            <text x="70" y="100" style="font-size: 9px; fill: #475569;">→ % of theoretical compute used</text>
+            <text x="70" y="115" style="font-size: 9px; fill: #10b981;">✓ Good: >60%  </text>
+            <text x="170" y="115" style="font-size: 9px; fill: #ef4444;">✗ Bad: <30%</text>
+            
+            <text x="70" y="140" style="font-size: 10px; fill: #1e3a8a; font-weight: 600;">sm__warps_active.avg.pct_of_peak</text>
+            <text x="70" y="155" style="font-size: 9px; fill: #475569;">→ Occupancy (warps in flight)</text>
+            <text x="70" y="170" style="font-size: 9px; fill: #10b981;">✓ Good: >50%  </text>
+            <text x="170" y="170" style="font-size: 9px; fill: #ef4444;">✗ Bad: <25%</text>
+            
+            <text x="70" y="195" style="font-size: 10px; fill: #1e3a8a; font-weight: 600;">smsp__sass_thread_inst_executed.sum</text>
+            <text x="70" y="210" style="font-size: 9px; fill: #475569;">→ Total instructions executed</text>
+            
+            <!-- Memory metrics box -->
+            <rect x="470" y="30" width="380" height="200" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="660" y="55" style="font-size: 13px; font-weight: bold; fill: #92400e;" text-anchor="middle">Memory Metrics</text>
+            
+            <text x="490" y="85" style="font-size: 10px; fill: #78350f; font-weight: 600;">dram__throughput.avg.pct_of_peak</text>
+            <text x="490" y="100" style="font-size: 9px; fill: #475569;">→ % of memory bandwidth used</text>
+            <text x="490" y="115" style="font-size: 9px; fill: #10b981;">✓ Good: >70%  </text>
+            <text x="590" y="115" style="font-size: 9px; fill: #ef4444;">✗ Waste: <40%</text>
+            
+            <text x="490" y="140" style="font-size: 10px; fill: #78350f; font-weight: 600;">l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum</text>
+            <text x="490" y="155" style="font-size: 9px; fill: #475569;">→ L1 cache hit rate for global loads</text>
+            
+            <text x="490" y="180" style="font-size: 10px; fill: #78350f; font-weight: 600;">lts__t_sectors_srcunit_tex_op_read.sum</text>
+            <text x="490" y="195" style="font-size: 9px; fill: #475569;">→ L2 cache misses (→ DRAM traffic)</text>
+            
+            <!-- Stall reasons box -->
+            <rect x="50" y="260" width="800" height="100" fill="#f0fdf4" stroke="#10b981" stroke-width="2" rx="8"/>
+            <text x="450" y="285" style="font-size: 13px; font-weight: bold; fill: #047857;" text-anchor="middle">Warp Stall Reasons (Why Warps Wait)</text>
+            
+            <text x="80" y="315" style="font-size: 10px; fill: #065f46; font-weight: 600;">smsp__warp_issue_stalled_*:</text>
+            
+            <text x="80" y="340" style="font-size: 9px; fill: #065f46;">• long_scoreboard: Waiting for memory (main bottleneck)</text>
+            <text x="400" y="340" style="font-size: 9px; fill: #065f46;">• not_selected: Other warps prioritized</text>
+            <text x="80" y="355" style="font-size: 9px; fill: #065f46;">• math_pipe_throttle: FP units at capacity</text>
+            <text x="400" y="355" style="font-size: 9px; fill: #065f46;">• barrier: Waiting at __syncthreads()</text>
+            
+            <!-- Decision tree -->
+            <text x="450" y="400" style="font-size: 12px; font-weight: bold; fill: #1e293b;" text-anchor="middle">Quick Diagnosis</text>
+            
+            <rect x="100" y="420" width="200" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="1" rx="4"/>
+            <text x="200" y="445" style="font-size: 10px; fill: #1e40af; font-weight: bold;" text-anchor="middle">High Memory Throughput</text>
+            <text x="200" y="465" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">+ Low Compute → Memory Bound</text>
+            
+            <rect x="350" y="420" width="200" height="60" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="4"/>
+            <text x="450" y="445" style="font-size: 10px; fill: #92400e; font-weight: bold;" text-anchor="middle">High Compute Throughput</text>
+            <text x="450" y="465" style="font-size: 9px; fill: #92400e;" text-anchor="middle">+ Low Memory → Compute Bound</text>
+            
+            <rect x="600" y="420" width="200" height="60" fill="#fef2f2" stroke="#ef4444" stroke-width="1" rx="4"/>
+            <text x="700" y="445" style="font-size: 10px; fill: #b91c1c; font-weight: bold;" text-anchor="middle">Both Low</text>
+            <text x="700" y="465" style="font-size: 9px; fill: #b91c1c;" text-anchor="middle">→ Latency Bound (low occupancy)</text>
+          </svg>
+          <div class="diagram-caption">Use these metrics to identify whether your kernel is compute, memory, or latency bound</div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-card good">
+            <div class="metric-value">85%</div>
+            <div class="metric-label">SM Throughput (Good)</div>
+          </div>
+          <div class="metric-card warning">
+            <div class="metric-value">45%</div>
+            <div class="metric-label">Occupancy (Needs Work)</div>
+          </div>
+          <div class="metric-card bad">
+            <div class="metric-value">20%</div>
+            <div class="metric-label">Memory BW (Bottleneck!)</div>
+          </div>
+        </div>
+
+        <h3 id="ncu-roofline">Roofline Analysis</h3>
+
+        <p>The <strong>roofline model</strong> visualizes whether a kernel is limited by compute or memory bandwidth:</p>
+
+        <!-- Roofline diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Roofline Model for GPU Kernels</div>
+          <svg viewBox="0 0 900 450" style="max-width: 100%;">
+            <!-- Axes -->
+            <line x1="100" y1="350" x2="800" y2="350" stroke="#334155" stroke-width="2"/>
+            <line x1="100" y1="350" x2="100" y2="50" stroke="#334155" stroke-width="2"/>
+            
+            <!-- X-axis label -->
+            <text x="450" y="400" style="font-size: 11px; fill: #1e293b; font-weight: bold;" text-anchor="middle">Arithmetic Intensity (FLOP/Byte)</text>
+            <text x="100" y="380" style="font-size: 9px; fill: #475569;">0.1</text>
+            <text x="250" y="380" style="font-size: 9px; fill: #475569;">1</text>
+            <text x="450" y="380" style="font-size: 9px; fill: #475569;">10</text>
+            <text x="650" y="380" style="font-size: 9px; fill: #475569;">100</text>
+            
+            <!-- Y-axis label -->
+            <text x="40" y="200" style="font-size: 11px; fill: #1e293b; font-weight: bold;" text-anchor="middle" transform="rotate(-90 40 200)">Performance (GFLOP/s)</text>
+            <text x="85" y="350" style="font-size: 9px; fill: #475569;">1</text>
+            <text x="75" y="250" style="font-size: 9px; fill: #475569;">100</text>
+            <text x="75" y="150" style="font-size: 9px; fill: #475569;">1000</text>
+            <text x="65" y="80" style="font-size: 9px; fill: #475569;">10000</text>
+            
+            <!-- Memory bandwidth roof (sloped) -->
+            <line x1="100" y1="350" x2="400" y2="100" stroke="#f59e0b" stroke-width="3"/>
+            <text x="200" y="200" style="font-size: 10px; fill: #f59e0b; font-weight: bold;" transform="rotate(-45 200 200)">Memory BW Roof</text>
+            
+            <!-- Compute roof (flat) -->
+            <line x1="400" y1="100" x2="800" y2="100" stroke="#3b82f6" stroke-width="3"/>
+            <text x="600" y="85" style="font-size: 10px; fill: #3b82f6; font-weight: bold;">Compute Roof (Peak FLOPS)</text>
+            
+            <!-- Ridge point -->
+            <circle cx="400" cy="100" r="6" fill="#10b981"/>
+            <text x="400" y="130" style="font-size: 9px; fill: #10b981; font-weight: bold;" text-anchor="middle">Ridge Point</text>
+            
+            <!-- Sample kernel points -->
+            <!-- Memory bound kernel -->
+            <circle cx="200" cy="250" r="8" fill="#ef4444"/>
+            <text x="220" y="245" style="font-size: 9px; fill: #ef4444; font-weight: bold;">Kernel A (Memory Bound)</text>
+            <text x="220" y="260" style="font-size: 8px; fill: #ef4444;">AI=0.5, far from roof</text>
+            
+            <!-- Balanced kernel -->
+            <circle cx="380" cy="120" r="8" fill="#10b981"/>
+            <text x="400" y="155" style="font-size: 9px; fill: #10b981; font-weight: bold;">Kernel B (Near Optimal)</text>
+            <text x="400" y="170" style="font-size: 8px; fill: #10b981;">AI=8, close to ridge</text>
+            
+            <!-- Compute bound kernel -->
+            <circle cx="600" cy="120" r="8" fill="#3b82f6"/>
+            <text x="620" y="145" style="font-size: 9px; fill: #3b82f6; font-weight: bold;">Kernel C (Compute Bound)</text>
+            <text x="620" y="160" style="font-size: 8px; fill: #3b82f6;">AI=50, at compute roof</text>
+            
+            <!-- Regions -->
+            <rect x="110" y="320" width="80" height="20" fill="#fef3c7" opacity="0.5"/>
+            <text x="150" y="335" style="font-size: 8px; fill: #92400e;" text-anchor="middle">Memory Bound</text>
+            
+            <rect x="500" y="110" width="80" height="20" fill="#dbeafe" opacity="0.5"/>
+            <text x="540" y="125" style="font-size: 8px; fill: #1e40af;" text-anchor="middle">Compute Bound</text>
+            
+            <!-- Optimization arrows -->
+            <path d="M 200 245 L 200 215" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreenUp)"/>
+            <text x="260" y="225" style="font-size: 8px; fill: #10b981;">Increase AI (cache, tiling)</text>
+            
+            <defs>
+              <marker id="arrowGreenUp" markerWidth="10" markerHeight="10" refX="5" refY="10" orient="auto">
+                <polygon points="0,10 5,0 10,10" fill="#10b981"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Kernels below the roof have optimization potential. Move toward the ridge point for best performance.</div>
+        </div>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> Reading the Roofline</div>
+          <p><strong>Arithmetic Intensity</strong> = FLOP / Bytes transferred. Low AI kernels (vector add, copy) are memory bound. High AI kernels (dense matmul) are compute bound. The <strong>ridge point</strong> is where both resources are fully utilized.</p>
+        </div>
+
+        <!-- SECTION 5: Optimization Workflow -->
+        <h2 id="optimization-workflow">5. Optimization Workflow</h2>
+
+        <p>A systematic approach to GPU optimization:</p>
+
+        <!-- Workflow diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">GPU Optimization Workflow</div>
+          <svg viewBox="0 0 900 380" style="max-width: 100%;">
+            <!-- Step 1 -->
+            <rect x="50" y="50" width="160" height="80" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="8"/>
+            <text x="130" y="80" style="font-size: 11px; font-weight: bold; fill: #1e40af;" text-anchor="middle">1. Profile with</text>
+            <text x="130" y="100" style="font-size: 11px; font-weight: bold; fill: #1e40af;" text-anchor="middle">Nsight Systems</text>
+            <text x="130" y="120" style="font-size: 9px; fill: #475569;" text-anchor="middle">Find hotspots</text>
+            
+            <path d="M 220 90 L 260 90" stroke="#475569" stroke-width="2" marker-end="url(#arrowFlow)"/>
+            
+            <!-- Step 2 -->
+            <rect x="270" y="50" width="160" height="80" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="350" y="80" style="font-size: 11px; font-weight: bold; fill: #92400e;" text-anchor="middle">2. Profile kernel</text>
+            <text x="350" y="100" style="font-size: 11px; font-weight: bold; fill: #92400e;" text-anchor="middle">with Nsight Compute</text>
+            <text x="350" y="120" style="font-size: 9px; fill: #475569;" text-anchor="middle">Identify bottleneck</text>
+            
+            <path d="M 440 90 L 480 90" stroke="#475569" stroke-width="2" marker-end="url(#arrowFlow)"/>
+            
+            <!-- Step 3 -->
+            <rect x="490" y="50" width="160" height="80" fill="#f0fdf4" stroke="#10b981" stroke-width="2" rx="8"/>
+            <text x="570" y="80" style="font-size: 11px; font-weight: bold; fill: #047857;" text-anchor="middle">3. Analyze</text>
+            <text x="570" y="100" style="font-size: 11px; font-weight: bold; fill: #047857;" text-anchor="middle">Roofline Position</text>
+            <text x="570" y="120" style="font-size: 9px; fill: #475569;" text-anchor="middle">Compute vs Memory?</text>
+            
+            <path d="M 660 90 L 700 90" stroke="#475569" stroke-width="2" marker-end="url(#arrowFlow)"/>
+            
+            <!-- Step 4 -->
+            <rect x="710" y="50" width="160" height="80" fill="#fce7f3" stroke="#ec4899" stroke-width="2" rx="8"/>
+            <text x="790" y="80" style="font-size: 11px; font-weight: bold; fill: #be185d;" text-anchor="middle">4. Apply</text>
+            <text x="790" y="100" style="font-size: 11px; font-weight: bold; fill: #be185d;" text-anchor="middle">Optimization</text>
+            <text x="790" y="120" style="font-size: 9px; fill: #475569;" text-anchor="middle">Based on diagnosis</text>
+            
+            <!-- Loop back arrow -->
+            <path d="M 790 140 Q 790 200 450 200 Q 130 200 130 140" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#arrowFlow)" stroke-dasharray="5,5"/>
+            <text x="450" y="220" style="font-size: 10px; fill: #475569; font-style: italic;" text-anchor="middle">Repeat until satisfied</text>
+            
+            <!-- Optimization strategies -->
+            <text x="450" y="270" style="font-size: 12px; font-weight: bold; fill: #1e293b;" text-anchor="middle">Optimization Strategies by Bottleneck</text>
+            
+            <!-- Memory bound fixes -->
+            <rect x="50" y="290" width="260" height="80" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="4"/>
+            <text x="180" y="310" style="font-size: 10px; fill: #92400e; font-weight: bold;" text-anchor="middle">Memory Bound</text>
+            <text x="60" y="330" style="font-size: 9px; fill: #78350f;">• Coalesce memory access</text>
+            <text x="60" y="345" style="font-size: 9px; fill: #78350f;">• Use shared memory tiling</text>
+            <text x="60" y="360" style="font-size: 9px; fill: #78350f;">• Reduce global memory traffic</text>
+            
+            <!-- Compute bound fixes -->
+            <rect x="330" y="290" width="260" height="80" fill="#dbeafe" stroke="#3b82f6" stroke-width="1" rx="4"/>
+            <text x="460" y="310" style="font-size: 10px; fill: #1e40af; font-weight: bold;" text-anchor="middle">Compute Bound</text>
+            <text x="340" y="330" style="font-size: 9px; fill: #1e3a8a;">• Use Tensor Cores (if applicable)</text>
+            <text x="340" y="345" style="font-size: 9px; fill: #1e3a8a;">• Reduce instruction count</text>
+            <text x="340" y="360" style="font-size: 9px; fill: #1e3a8a;">• Use faster math (__fmaf)</text>
+            
+            <!-- Latency bound fixes -->
+            <rect x="610" y="290" width="260" height="80" fill="#fef2f2" stroke="#ef4444" stroke-width="1" rx="4"/>
+            <text x="740" y="310" style="font-size: 10px; fill: #b91c1c; font-weight: bold;" text-anchor="middle">Latency Bound</text>
+            <text x="620" y="330" style="font-size: 9px; fill: #991b1b;">• Increase occupancy</text>
+            <text x="620" y="345" style="font-size: 9px; fill: #991b1b;">• Reduce register usage</text>
+            <text x="620" y="360" style="font-size: 9px; fill: #991b1b;">• Use more threads per block</text>
+            
+            <defs>
+              <marker id="arrowFlow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#475569"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Iterative profiling → analysis → optimization cycle</div>
+        </div>
+
+        <!-- SECTION 6: Case Study -->
+        <h2 id="case-study">6. Case Study: Optimizing Matrix Multiply</h2>
+
+        <p>Let's walk through a real optimization using both tools.</p>
+
+        <h3>Step 1: Baseline Implementation</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">matmul_naive.cu</span>
+          </div>
+          <pre><code><span class="comment">// Naive matrix multiply - each thread computes one element</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">matmul_naive</span>(<span class="type">float</span>* A, <span class="type">float</span>* B, <span class="type">float</span>* C, 
+                              <span class="type">int</span> M, <span class="type">int</span> N, <span class="type">int</span> K) {
+    <span class="type">int</span> row = blockIdx.y * blockDim.y + threadIdx.y;
+    <span class="type">int</span> col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    <span class="keyword">if</span> (row < M && col < N) {
+        <span class="type">float</span> sum = <span class="number">0.0f</span>;
+        <span class="keyword">for</span> (<span class="type">int</span> k = <span class="number">0</span>; k < K; k++) {
+            sum += A[row * K + k] * B[k * N + col];  <span class="comment">// Global memory!</span>
+        }
+        C[row * N + col] = sum;
+    }
+}
+</code></pre>
+        </div>
+
+        <h3>Step 2: Profile with Nsight Systems</h3>
+
+        <div class="terminal-output">
+<span class="prompt">$ nsys profile --stats=true ./matmul_naive</span>
+
+<span class="output">CUDA Kernel Statistics:
+ Time(%)  Total Time   Instances  Avg Time     Name
+ -------  ----------   ---------  --------     ----
+   98.2%    4.23 s          100    42.3 ms     matmul_naive
+
+GPU-Util: 45%  ← Low utilization!</span>
+        </div>
+
+        <h3>Step 3: Profile with Nsight Compute</h3>
+
+        <div class="terminal-output">
+<span class="prompt">$ ncu --set full ./matmul_naive | grep -E "Throughput|Occupancy"</span>
+
+<span class="output">Metric                                    Value
+----------------------------------------  --------
+sm__throughput.avg.pct_of_peak_sustained     18.3%  ← Very low!
+gpu__compute_memory_throughput.avg.pct       85.2%  ← Memory bound
+sm__warps_active.avg.pct_of_peak             32.4%  ← Low occupancy
+
+Warp Stall Reasons:
+  long_scoreboard (memory): 68%  ← Waiting for memory!
+  not_selected: 22%
+  other: 10%</span>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Diagnosis</div>
+          <p>The kernel is <strong>memory bound</strong>: high memory throughput, low compute throughput, and 68% of time waiting for memory. Solution: <strong>use shared memory tiling</strong>.</p>
+        </div>
+
+        <h3>Step 4: Optimized Implementation</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">CUDA C++</span>
+            <span class="code-filename">matmul_tiled.cu</span>
+          </div>
+          <pre><code><span class="keyword">#define</span> TILE_SIZE <span class="number">32</span>
+
+<span class="comment">// Tiled matrix multiply using shared memory</span>
+<span class="keyword">__global__</span> <span class="type">void</span> <span class="function">matmul_tiled</span>(<span class="type">float</span>* A, <span class="type">float</span>* B, <span class="type">float</span>* C,
+                             <span class="type">int</span> M, <span class="type">int</span> N, <span class="type">int</span> K) {
+    <span class="comment">// Shared memory tiles</span>
+    <span class="keyword">__shared__</span> <span class="type">float</span> As[TILE_SIZE][TILE_SIZE];
+    <span class="keyword">__shared__</span> <span class="type">float</span> Bs[TILE_SIZE][TILE_SIZE];
+    
+    <span class="type">int</span> row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    <span class="type">int</span> col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    
+    <span class="type">float</span> sum = <span class="number">0.0f</span>;
+    
+    <span class="comment">// Loop over tiles</span>
+    <span class="keyword">for</span> (<span class="type">int</span> t = <span class="number">0</span>; t < (K + TILE_SIZE - <span class="number">1</span>) / TILE_SIZE; t++) {
+        <span class="comment">// Cooperative load into shared memory</span>
+        <span class="keyword">if</span> (row < M && t * TILE_SIZE + threadIdx.x < K)
+            As[threadIdx.y][threadIdx.x] = A[row * K + t * TILE_SIZE + threadIdx.x];
+        <span class="keyword">else</span>
+            As[threadIdx.y][threadIdx.x] = <span class="number">0.0f</span>;
+            
+        <span class="keyword">if</span> (col < N && t * TILE_SIZE + threadIdx.y < K)
+            Bs[threadIdx.y][threadIdx.x] = B[(t * TILE_SIZE + threadIdx.y) * N + col];
+        <span class="keyword">else</span>
+            Bs[threadIdx.y][threadIdx.x] = <span class="number">0.0f</span>;
+        
+        __syncthreads();  <span class="comment">// Wait for tile to load</span>
+        
+        <span class="comment">// Compute on tile (from shared memory - fast!)</span>
+        <span class="keyword">for</span> (<span class="type">int</span> k = <span class="number">0</span>; k < TILE_SIZE; k++) {
+            sum += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+        }
+        
+        __syncthreads();  <span class="comment">// Wait before loading next tile</span>
+    }
+    
+    <span class="keyword">if</span> (row < M && col < N)
+        C[row * N + col] = sum;
+}
+</code></pre>
+        </div>
+
+        <h3>Step 5: Verify Improvement</h3>
+
+        <div class="terminal-output">
+<span class="prompt">$ ncu --set full ./matmul_tiled | grep -E "Throughput|Occupancy"</span>
+
+<span class="output">Metric                                    Value
+----------------------------------------  --------
+sm__throughput.avg.pct_of_peak_sustained     72.8%  ← 4x improvement!
+gpu__compute_memory_throughput.avg.pct       45.3%  ← More balanced
+sm__warps_active.avg.pct_of_peak             68.2%  ← Better occupancy
+
+Warp Stall Reasons:
+  long_scoreboard (memory): 28%  ← Much less waiting!
+  barrier: 35%  ← Expected for tiled algo
+  not_selected: 27%</span>
+        </div>
+
+        <!-- Performance comparison -->
+        <div class="diagram-container">
+          <div class="diagram-title">Performance Comparison: Naive vs Tiled</div>
+          <svg viewBox="0 0 900 280" style="max-width: 100%;">
+            <!-- Naive bar -->
+            <rect x="100" y="80" width="120" height="40" fill="#ef4444" rx="4"/>
+            <text x="160" y="105" style="font-size: 11px; fill: white; font-weight: bold;" text-anchor="middle">42.3 ms</text>
+            <text x="160" y="140" style="font-size: 10px; fill: #475569;" text-anchor="middle">Naive</text>
+            
+            <!-- Tiled bar -->
+            <rect x="100" y="170" width="480" height="40" fill="#10b981" rx="4"/>
+            <text x="340" y="195" style="font-size: 11px; fill: white; font-weight: bold;" text-anchor="middle">10.5 ms (4x faster!)</text>
+            <text x="340" y="230" style="font-size: 10px; fill: #475569;" text-anchor="middle">Tiled (Shared Memory)</text>
+            
+            <!-- cuBLAS reference -->
+            <rect x="100" y="260" width="600" height="40" fill="#3b82f6" rx="4"/>
+            <text x="400" y="285" style="font-size: 11px; fill: white; font-weight: bold;" text-anchor="middle">8.2 ms (cuBLAS - near optimal)</text>
+            
+            <!-- Speedup annotation -->
+            <text x="750" y="130" style="font-size: 12px; fill: #10b981; font-weight: bold;">4x speedup</text>
+            <path d="M 230 100 Q 300 50 400 100" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowGreenCurve)"/>
+            
+            <defs>
+              <marker id="arrowGreenCurve" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#10b981"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Shared memory tiling achieves 4x speedup, approaching cuBLAS performance</div>
+        </div>
+
+        <!-- Summary -->
+        <h2 id="summary">Summary & Best Practices</h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.95rem;">
+          <tr style="background: var(--bg-secondary);">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--accent);">Tool</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--accent);">Use For</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--accent);">Key Commands</th>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px;"><strong>Nsight Systems</strong></td>
+            <td style="padding: 12px;">Timeline, CPU-GPU interaction, finding hotspots</td>
+            <td style="padding: 12px;"><code>nsys profile</code>, <code>nsys stats</code></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px;"><strong>Nsight Compute</strong></td>
+            <td style="padding: 12px;">Kernel metrics, roofline, optimization guidance</td>
+            <td style="padding: 12px;"><code>ncu --set full</code>, <code>ncu --metrics</code></td>
+          </tr>
+        </table>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> Key Takeaways</div>
+          <p>
+            <strong>1.</strong> Always start with Nsight Systems to understand the big picture.<br>
+            <strong>2.</strong> Use Nsight Compute for deep kernel analysis.<br>
+            <strong>3.</strong> Check roofline position to diagnose compute vs memory bound.<br>
+            <strong>4.</strong> Look at warp stall reasons to understand why threads wait.<br>
+            <strong>5.</strong> Iterate: profile → analyze → optimize → repeat.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Navigation -->
+      <div class="post-navigation">
+        <a href="cuda-memory-hierarchy.html" class="post-nav-item prev">
+          <span class="post-nav-label">← Previous</span>
+          <span class="post-nav-title">CUDA Memory Hierarchy</span>
+        </a>
+        <a href="efficient-inference.html" class="post-nav-item next">
+          <span class="post-nav-label">Next →</span>
+          <span class="post-nav-title">Efficient Inference: Pruning & Quantization</span>
+        </a>
+      </div>
+    </article>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; 2026 Alireza Olama. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="https://scholar.google.com/citations?user=km4oc50AAAAJ&hl=en" target="_blank" rel="noreferrer"><i class="fas fa-graduation-cap"></i></a>
+          <a href="https://github.com/alirezalm" target="_blank" rel="noreferrer"><i class="fab fa-github"></i></a>
+          <a href="https://www.linkedin.com/in/alireza-olama-213a6a107/" target="_blank" rel="noreferrer"><i class="fab fa-linkedin"></i></a>
+          <a href="https://www.youtube.com/@HPC4AI" target="_blank" rel="noreferrer"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Theme toggle
+      function toggleTheme() {
+        const body = document.body;
+        const icon = document.querySelector('.theme-toggle i');
+        body.classList.toggle('dark-mode');
+        
+        if (body.classList.contains('dark-mode')) {
+          icon.classList.remove('fa-moon');
+          icon.classList.add('fa-sun');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          icon.classList.remove('fa-sun');
+          icon.classList.add('fa-moon');
+          localStorage.setItem('theme', 'light');
+        }
+      }
+
+      // Check for saved theme
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const icon = document.querySelector('.theme-toggle i');
+        if (savedTheme === 'dark') {
+          document.body.classList.add('dark-mode');
+          if (icon) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Writing Custom CUDA Kernels with Triton | Alireza Olama</title>
+    <meta name="description" content="Master GPU programming with OpenAI Triton: from vector addition to fused attention kernels with Python-like syntax" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- Base styles -->
+    <link rel="stylesheet" href="../styles.css" />
+    
+    <style>
+      /* Post-specific styles */
+      .post-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 16px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      body.dark-mode .post-nav {
+        background: rgba(15, 23, 42, 0.95);
+      }
+      
+      .post-nav-links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      
+      .post-nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+      }
+      
+      .post-nav-links a:hover {
+        color: var(--accent);
+      }
+      
+      .post-hero {
+        padding: 140px 32px 60px;
+        background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #ea580c 100%);
+        color: white;
+      }
+      
+      .post-hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
+      .post-category {
+        display: inline-block;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+      }
+      
+      .post-hero h1 {
+        font-family: 'Fraunces', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1.2;
+      }
+      
+      .post-hero .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.9;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      
+      .post-meta {
+        display: flex;
+        gap: 24px;
+        font-size: 0.9rem;
+        opacity: 0.85;
+      }
+      
+      .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .post-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 60px 32px;
+      }
+      
+      .post-content h2 {
+        font-family: 'Fraunces', serif;
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 48px 0 24px;
+        color: var(--text-primary);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 8px;
+      }
+      
+      .post-content h3 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin: 36px 0 16px;
+        color: var(--text-primary);
+      }
+      
+      .post-content h4 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 28px 0 12px;
+        color: var(--text-primary);
+      }
+      
+      .post-content p {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 20px;
+        color: var(--text-secondary);
+      }
+      
+      .post-content ul, .post-content ol {
+        margin-bottom: 24px;
+        padding-left: 24px;
+      }
+      
+      .post-content li {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+      }
+      
+      /* Table of Contents */
+      .toc {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px 32px;
+        margin-bottom: 40px;
+        border-left: 4px solid var(--accent);
+      }
+      
+      .toc-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+      }
+      
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .toc li {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+      
+      .toc a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      
+      .toc a:hover {
+        color: var(--accent);
+      }
+      
+      /* Code blocks */
+      .code-block {
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 24px 0;
+        overflow: hidden;
+      }
+      
+      .code-header {
+        background: #334155;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .code-lang {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      
+      .code-filename {
+        color: #64748b;
+        font-size: 0.8rem;
+      }
+      
+      .code-block pre {
+        margin: 0;
+        padding: 20px;
+        overflow-x: auto;
+      }
+      
+      .code-block code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      
+      /* Syntax highlighting */
+      .keyword { color: #c792ea; }
+      .function { color: #82aaff; }
+      .string { color: #c3e88d; }
+      .number { color: #f78c6c; }
+      .comment { color: #546e7a; font-style: italic; }
+      .type { color: #ffcb6b; }
+      .builtin { color: #89ddff; }
+      .operator { color: #89ddff; }
+      .decorator { color: #f78c6c; }
+      .variable { color: #82aaff; }
+      
+      /* Diagrams */
+      .diagram-container {
+        margin: 32px 0;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 24px;
+        overflow-x: auto;
+      }
+      
+      .diagram-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+        text-align: center;
+      }
+      
+      .diagram-caption {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-top: 16px;
+        font-style: italic;
+      }
+      
+      /* Info boxes */
+      .info-box {
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
+      
+      .info-box.note {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+      }
+      
+      .info-box.warning {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+      }
+      
+      .info-box.tip {
+        background: #f0fdf4;
+        border-left: 4px solid #10b981;
+      }
+      
+      .info-box.triton {
+        background: #fff7ed;
+        border-left: 4px solid #f97316;
+      }
+      
+      body.dark-mode .info-box.note {
+        background: rgba(59, 130, 246, 0.1);
+      }
+      
+      body.dark-mode .info-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+      }
+      
+      body.dark-mode .info-box.tip {
+        background: rgba(16, 185, 129, 0.1);
+      }
+      
+      body.dark-mode .info-box.triton {
+        background: rgba(249, 115, 22, 0.1);
+      }
+      
+      .info-box-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .info-box.note .info-box-title { color: #2563eb; }
+      .info-box.warning .info-box-title { color: #d97706; }
+      .info-box.tip .info-box-title { color: #059669; }
+      .info-box.triton .info-box-title { color: #ea580c; }
+      
+      .info-box p {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      
+      /* Comparison table */
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 0.95rem;
+      }
+      
+      .comparison-table th,
+      .comparison-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .comparison-table th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .comparison-table tr:hover {
+        background: var(--bg-secondary);
+      }
+      
+      /* Post navigation */
+      .post-navigation {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 60px;
+        padding-top: 40px;
+        border-top: 1px solid var(--border);
+      }
+      
+      .post-nav-item {
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .post-nav-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      .post-nav-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        display: block;
+      }
+      
+      .post-nav-title {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .post-nav-item.next {
+        text-align: right;
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .post-hero {
+          padding: 120px 20px 40px;
+        }
+        
+        .post-container {
+          padding: 40px 20px;
+        }
+        
+        .post-meta {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        
+        .post-navigation {
+          grid-template-columns: 1fr;
+        }
+        
+        .post-nav-item.next {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="post-nav">
+      <a href="../index.html" class="logo" style="font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.5rem; color: var(--text-primary); text-decoration: none;">AO</a>
+      <div class="post-nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../blog.html">Blog</a>
+        <a href="../index.html#research">Research</a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="post-hero">
+      <div class="post-hero-content">
+        <span class="post-category"><i class="fas fa-code"></i> GPU Programming</span>
+        <h1>Writing Custom CUDA Kernels with Triton</h1>
+        <p class="subtitle">Master GPU programming with OpenAI Triton: from vector addition to fused attention kernels with Python-like syntax.</p>
+        <div class="post-meta">
+          <span><i class="fas fa-calendar"></i> March 6, 2026</span>
+          <span><i class="fas fa-clock"></i> 30 min read</span>
+          <span><i class="fas fa-signal"></i> Intermediate-Advanced</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Post Content -->
+    <article class="post-container">
+      <div class="post-content">
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <div class="toc-title">Table of Contents</div>
+          <ol>
+            <li><a href="#introduction">Why Triton?</a></li>
+            <li><a href="#triton-vs-cuda">Triton vs CUDA: Key Differences</a></li>
+            <li><a href="#core-concepts">Core Concepts</a>
+              <ol style="margin-top: 8px;">
+                <li><a href="#programs-blocks">Programs & Blocks</a></li>
+                <li><a href="#pointers-masks">Pointers & Masks</a></li>
+              </ol>
+            </li>
+            <li><a href="#vector-add">Hello World: Vector Addition</a></li>
+            <li><a href="#matrix-mul">Matrix Multiplication with Tiling</a></li>
+            <li><a href="#fused-ops">Fused Operations</a>
+              <ol style="margin-top: 8px;">
+                <li><a href="#fused-softmax">Fused Softmax</a></li>
+                <li><a href="#fused-layernorm">Fused LayerNorm</a></li>
+              </ol>
+            </li>
+            <li><a href="#autotuning">Autotuning for Performance</a></li>
+            <li><a href="#pytorch-integration">PyTorch Integration</a></li>
+            <li><a href="#debugging">Debugging & Profiling</a></li>
+            <li><a href="#best-practices">Best Practices & Patterns</a></li>
+          </ol>
+        </div>
+
+        <!-- SECTION 1: Introduction -->
+        <h2 id="introduction">1. Why Triton?</h2>
+
+        <p><strong>Triton</strong> is an open-source language and compiler by OpenAI that makes writing GPU kernels as accessible as writing NumPy code, while achieving performance competitive with hand-tuned CUDA.</p>
+
+        <p>The key insight: most GPU optimization comes from <strong>memory access patterns</strong>, not arithmetic. Triton handles the hard parts (coalescing, bank conflicts, synchronization) while you focus on the algorithm.</p>
+
+        <!-- Why Triton diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">The GPU Programming Abstraction Ladder</div>
+          <svg viewBox="0 0 900 320" style="max-width: 100%;">
+            <!-- Abstraction levels -->
+            <rect x="50" y="30" width="800" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="8"/>
+            <text x="450" y="55" style="font-size: 14px; font-weight: bold; fill: #1e40af;" text-anchor="middle">PyTorch / JAX (High-Level)</text>
+            <text x="450" y="75" style="font-size: 10px; fill: #1e40af;" text-anchor="middle">torch.matmul(), F.softmax() - No GPU knowledge needed</text>
+            
+            <rect x="50" y="110" width="800" height="60" fill="#fff7ed" stroke="#f97316" stroke-width="3" rx="8"/>
+            <text x="450" y="135" style="font-size: 14px; font-weight: bold; fill: #ea580c;" text-anchor="middle">Triton (Sweet Spot) ⭐</text>
+            <text x="450" y="155" style="font-size: 10px; fill: #ea580c;" text-anchor="middle">Python-like syntax, block-level programming, auto memory optimization</text>
+            
+            <rect x="50" y="190" width="800" height="60" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="450" y="215" style="font-size: 14px; font-weight: bold; fill: #92400e;" text-anchor="middle">CUDA C++ (Low-Level)</text>
+            <text x="450" y="235" style="font-size: 10px; fill: #92400e;" text-anchor="middle">Full control, manual memory management, thread-level programming</text>
+            
+            <rect x="50" y="270" width="800" height="40" fill="#f0fdf4" stroke="#10b981" stroke-width="2" rx="8"/>
+            <text x="450" y="295" style="font-size: 12px; font-weight: bold; fill: #047857;" text-anchor="middle">PTX / SASS (Assembly)</text>
+            
+            <!-- Arrows showing control vs ease -->
+            <text x="880" y="60" style="font-size: 10px; fill: #64748b;" text-anchor="end">Easier</text>
+            <text x="880" y="290" style="font-size: 10px; fill: #64748b;" text-anchor="end">More Control</text>
+            <path d="M 870 70 L 870 280" stroke="#64748b" stroke-width="2" marker-end="url(#arrowDown)"/>
+            
+            <defs>
+              <marker id="arrowDown" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#64748b"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Triton sits at the sweet spot: Python ease with near-CUDA performance</div>
+        </div>
+
+        <p><strong>When to use Triton:</strong></p>
+        <ul>
+          <li><strong>Custom fused operations</strong> - Combine multiple ops to reduce memory traffic</li>
+          <li><strong>Exotic activations/losses</strong> - When PyTorch doesn't have what you need</li>
+          <li><strong>Research prototyping</strong> - Test kernel ideas 10x faster than CUDA</li>
+          <li><strong>Flash Attention variants</strong> - Memory-efficient attention mechanisms</li>
+        </ul>
+
+        <div class="info-box triton">
+          <div class="info-box-title"><i class="fas fa-bolt"></i> Triton Powers Production Systems</div>
+          <p>PyTorch 2.0's <code>torch.compile()</code> uses Triton as its default GPU backend. When you use <code>torch.compile()</code>, Triton kernels are generated automatically!</p>
+        </div>
+
+        <!-- SECTION 2: Comparison -->
+        <h2 id="triton-vs-cuda">2. Triton vs CUDA: Key Differences</h2>
+
+        <table class="comparison-table">
+          <tr>
+            <th>Aspect</th>
+            <th>CUDA C++</th>
+            <th>Triton</th>
+          </tr>
+          <tr>
+            <td><strong>Programming Model</strong></td>
+            <td>Thread-level (SIMT)</td>
+            <td>Block-level (operate on tiles)</td>
+          </tr>
+          <tr>
+            <td><strong>Memory Management</strong></td>
+            <td>Manual (shared mem, coalescing)</td>
+            <td>Automatic (compiler optimizes)</td>
+          </tr>
+          <tr>
+            <td><strong>Synchronization</strong></td>
+            <td>Explicit <code>__syncthreads()</code></td>
+            <td>Implicit (compiler inserts)</td>
+          </tr>
+          <tr>
+            <td><strong>Bank Conflicts</strong></td>
+            <td>Manual padding/swizzling</td>
+            <td>Automatic avoidance</td>
+          </tr>
+          <tr>
+            <td><strong>Tensor Cores</strong></td>
+            <td>Manual <code>wmma</code> intrinsics</td>
+            <td>Automatic when shapes match</td>
+          </tr>
+          <tr>
+            <td><strong>Development Time</strong></td>
+            <td>Days to weeks</td>
+            <td>Hours to days</td>
+          </tr>
+          <tr>
+            <td><strong>Performance</strong></td>
+            <td>100% (baseline)</td>
+            <td>80-100% of hand-tuned CUDA</td>
+          </tr>
+        </table>
+
+        <!-- Visual comparison -->
+        <div class="diagram-container">
+          <div class="diagram-title">CUDA vs Triton: Mental Model</div>
+          <svg viewBox="0 0 900 250" style="max-width: 100%;">
+            <!-- CUDA side -->
+            <rect x="50" y="30" width="380" height="200" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="240" y="55" style="font-size: 13px; font-weight: bold; fill: #92400e;" text-anchor="middle">CUDA: Think in Threads</text>
+            
+            <!-- Thread grid -->
+            <g transform="translate(80, 70)">
+              <rect x="0" y="0" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="25" y="0" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="50" y="0" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="75" y="0" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="0" y="25" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="25" y="25" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="50" y="25" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <rect x="75" y="25" width="20" height="20" fill="#fcd34d" stroke="#b45309" rx="2"/>
+              <text x="48" y="70" style="font-size: 9px; fill: #92400e;" text-anchor="middle">Thread Block (256 threads)</text>
+            </g>
+            
+            <text x="100" y="175" style="font-size: 9px; fill: #78350f;">int tid = threadIdx.x;</text>
+            <text x="100" y="190" style="font-size: 9px; fill: #78350f;">output[tid] = input[tid] * 2;</text>
+            <text x="100" y="205" style="font-size: 9px; fill: #78350f;">// Each thread: 1 element</text>
+            
+            <!-- Triton side -->
+            <rect x="470" y="30" width="380" height="200" fill="#fff7ed" stroke="#f97316" stroke-width="2" rx="8"/>
+            <text x="660" y="55" style="font-size: 13px; font-weight: bold; fill: #ea580c;" text-anchor="middle">Triton: Think in Blocks</text>
+            
+            <!-- Block representation -->
+            <g transform="translate(500, 70)">
+              <rect x="0" y="0" width="140" height="60" fill="#fed7aa" stroke="#ea580c" stroke-width="2" rx="4"/>
+              <text x="70" y="35" style="font-size: 11px; fill: #c2410c;" text-anchor="middle">Block of 1024 elements</text>
+              <text x="70" y="70" style="font-size: 9px; fill: #ea580c;" text-anchor="middle">Program instance</text>
+            </g>
+            
+            <text x="520" y="175" style="font-size: 9px; fill: #c2410c;">offs = pid * BLOCK + tl.arange(BLOCK)</text>
+            <text x="520" y="190" style="font-size: 9px; fill: #c2410c;">x = tl.load(input + offs)</text>
+            <text x="520" y="205" style="font-size: 9px; fill: #c2410c;">tl.store(output + offs, x * 2)</text>
+          </svg>
+          <div class="diagram-caption">CUDA: one thread handles one element. Triton: one program handles a block of elements.</div>
+        </div>
+
+        <!-- SECTION 3: Core Concepts -->
+        <h2 id="core-concepts">3. Core Concepts</h2>
+
+        <h3 id="programs-blocks">Programs & Blocks</h3>
+
+        <p>In Triton, you write a <strong>program</strong> that operates on a <strong>block</strong> of data:</p>
+
+        <ul>
+          <li><strong>Program ID (<code>pid</code>)</strong>: Which chunk of data this instance handles (like blockIdx)</li>
+          <li><strong>Block Size</strong>: How many elements each program processes (a compile-time constant)</li>
+          <li><strong>Offsets</strong>: The indices into your tensors (computed from pid + arange)</li>
+        </ul>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">triton_concepts.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> triton
+<span class="keyword">import</span> triton.language <span class="keyword">as</span> tl
+
+<span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">my_kernel</span>(
+    input_ptr,    <span class="comment"># Pointer to input tensor</span>
+    output_ptr,   <span class="comment"># Pointer to output tensor</span>
+    n_elements,   <span class="comment"># Total number of elements</span>
+    BLOCK_SIZE: tl.constexpr,  <span class="comment"># Compile-time constant</span>
+):
+    <span class="comment"># Which program instance am I?</span>
+    pid = tl.<span class="function">program_id</span>(<span class="number">0</span>)  <span class="comment"># Like blockIdx.x</span>
+    
+    <span class="comment"># What are my offsets into the data?</span>
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_SIZE)
+    
+    <span class="comment"># Create mask for boundary handling</span>
+    mask = offsets < n_elements
+    
+    <span class="comment"># Load a block of data (with masking)</span>
+    x = tl.<span class="function">load</span>(input_ptr + offsets, mask=mask)
+    
+    <span class="comment"># Compute</span>
+    y = x * <span class="number">2</span>
+    
+    <span class="comment"># Store results</span>
+    tl.<span class="function">store</span>(output_ptr + offsets, y, mask=mask)
+</code></pre>
+        </div>
+
+        <h3 id="pointers-masks">Pointers & Masks</h3>
+
+        <p>Triton uses <strong>pointer arithmetic</strong> (like C) rather than tensor indexing:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">pointers_masks.py</span>
+          </div>
+          <pre><code><span class="comment"># 1D access</span>
+ptr = base_ptr + offset              <span class="comment"># Single element</span>
+ptrs = base_ptr + offsets            <span class="comment"># Vector of pointers</span>
+
+<span class="comment"># 2D access (row-major)</span>
+ptr = base_ptr + row * stride + col  <span class="comment"># Element at [row, col]</span>
+
+<span class="comment"># Masked load/store (CRUCIAL for correctness)</span>
+mask = offsets < n_elements
+x = tl.<span class="function">load</span>(ptr, mask=mask, other=<span class="number">0.0</span>)  <span class="comment"># Load 0 where mask is False</span>
+tl.<span class="function">store</span>(ptr, x, mask=mask)              <span class="comment"># Only store where mask is True</span>
+
+<span class="comment"># 2D mask example</span>
+row_mask = rows[:, <span class="keyword">None</span>] < M
+col_mask = cols[<span class="keyword">None</span>, :] < N
+mask = row_mask & col_mask
+</code></pre>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-exclamation-triangle"></i> Always Use Masks!</div>
+          <p>Unlike CUDA where you can early-return, Triton programs must handle all elements in the block. Use masks to prevent out-of-bounds access - forgetting masks causes silent memory corruption!</p>
+        </div>
+
+        <!-- SECTION 4: Vector Addition -->
+        <h2 id="vector-add">4. Hello World: Vector Addition</h2>
+
+        <p>Let's implement <code>c = a + b</code> - the "hello world" of GPU programming:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">vector_add.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> torch
+<span class="keyword">import</span> triton
+<span class="keyword">import</span> triton.language <span class="keyword">as</span> tl
+
+<span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">vector_add_kernel</span>(
+    a_ptr, b_ptr, c_ptr,
+    n_elements,
+    BLOCK_SIZE: tl.constexpr,
+):
+    <span class="comment"># Program ID determines which block of elements we process</span>
+    pid = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+    
+    <span class="comment"># Compute offsets for this program</span>
+    offsets = pid * BLOCK_SIZE + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_SIZE)
+    
+    <span class="comment"># Mask for boundary</span>
+    mask = offsets < n_elements
+    
+    <span class="comment"># Load vectors a and b</span>
+    a = tl.<span class="function">load</span>(a_ptr + offsets, mask=mask)
+    b = tl.<span class="function">load</span>(b_ptr + offsets, mask=mask)
+    
+    <span class="comment"># Add them</span>
+    c = a + b
+    
+    <span class="comment"># Store result</span>
+    tl.<span class="function">store</span>(c_ptr + offsets, c, mask=mask)
+
+
+<span class="keyword">def</span> <span class="function">vector_add</span>(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    <span class="string">"""Triton vector addition wrapper."""</span>
+    <span class="keyword">assert</span> a.shape == b.shape
+    <span class="keyword">assert</span> a.is_cuda <span class="keyword">and</span> b.is_cuda
+    
+    c = torch.<span class="function">empty_like</span>(a)
+    n_elements = a.<span class="function">numel</span>()
+    
+    <span class="comment"># Grid: how many programs to launch</span>
+    BLOCK_SIZE = <span class="number">1024</span>
+    grid = (<span class="function">triton.cdiv</span>(n_elements, BLOCK_SIZE),)
+    
+    <span class="comment"># Launch kernel</span>
+    <span class="function">vector_add_kernel</span>[grid](
+        a, b, c,
+        n_elements,
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+    
+    <span class="keyword">return</span> c
+
+
+<span class="comment"># Test it!</span>
+<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:
+    a = torch.<span class="function">randn</span>(<span class="number">10000</span>, device=<span class="string">"cuda"</span>)
+    b = torch.<span class="function">randn</span>(<span class="number">10000</span>, device=<span class="string">"cuda"</span>)
+    
+    c_triton = <span class="function">vector_add</span>(a, b)
+    c_torch = a + b
+    
+    <span class="builtin">print</span>(<span class="string">f"Max error: {(c_triton - c_torch).abs().max()}"</span>)
+    <span class="comment"># Max error: 0.0</span>
+</code></pre>
+        </div>
+
+        <!-- Grid launch diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">How Triton Launches Programs</div>
+          <svg viewBox="0 0 900 200" style="max-width: 100%;">
+            <!-- Input array -->
+            <text x="50" y="30" style="font-size: 11px; fill: #475569;">Input: n_elements = 3500</text>
+            <rect x="50" y="40" width="700" height="30" fill="#dbeafe" stroke="#3b82f6" stroke-width="1" rx="4"/>
+            
+            <!-- Block divisions -->
+            <rect x="50" y="40" width="200" height="30" fill="#93c5fd" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            <text x="150" y="60" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Block 0: [0:1024]</text>
+            
+            <rect x="250" y="40" width="200" height="30" fill="#93c5fd" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            <text x="350" y="60" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Block 1: [1024:2048]</text>
+            
+            <rect x="450" y="40" width="200" height="30" fill="#93c5fd" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            <text x="550" y="60" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Block 2: [2048:3072]</text>
+            
+            <rect x="650" y="40" width="100" height="30" fill="#bfdbfe" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            <text x="700" y="60" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Block 3</text>
+            <text x="700" y="90" style="font-size: 8px; fill: #64748b;" text-anchor="middle">[3072:3500]</text>
+            <text x="700" y="102" style="font-size: 8px; fill: #dc2626;" text-anchor="middle">masked!</text>
+            
+            <!-- Grid calculation -->
+            <text x="50" y="140" style="font-size: 10px; fill: #475569;">grid = (ceil(3500 / 1024),) = (4,)</text>
+            <text x="50" y="160" style="font-size: 10px; fill: #475569;">4 program instances launched, each handles BLOCK_SIZE=1024 elements</text>
+            <text x="50" y="180" style="font-size: 10px; fill: #dc2626;">Block 3 uses mask to handle partial block (428 real + 596 masked)</text>
+          </svg>
+        </div>
+
+        <!-- SECTION 5: Matrix Multiplication -->
+        <h2 id="matrix-mul">5. Matrix Multiplication with Tiling</h2>
+
+        <p>Matrix multiplication is the workhorse of deep learning. Here's how to implement a tiled matmul in Triton:</p>
+
+        <!-- Tiled matmul diagram -->
+        <div class="diagram-container">
+          <div class="diagram-title">Tiled Matrix Multiplication: C = A @ B</div>
+          <svg viewBox="0 0 900 350" style="max-width: 100%;">
+            <!-- Matrix A -->
+            <text x="70" y="30" style="font-size: 12px; font-weight: bold; fill: #1e40af;">A (M×K)</text>
+            <rect x="50" y="40" width="180" height="180" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            
+            <!-- Highlighted row block in A -->
+            <rect x="50" y="80" width="180" height="40" fill="#93c5fd" stroke="#2563eb" stroke-width="2" rx="2"/>
+            <text x="140" y="105" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Block row (BLOCK_M)</text>
+            
+            <!-- Matrix B -->
+            <text x="300" y="30" style="font-size: 12px; font-weight: bold; fill: #047857;">B (K×N)</text>
+            <rect x="280" y="40" width="240" height="180" fill="#dcfce7" stroke="#10b981" stroke-width="2" rx="4"/>
+            
+            <!-- Highlighted column block in B -->
+            <rect x="340" y="40" width="50" height="180" fill="#86efac" stroke="#059669" stroke-width="2" rx="2"/>
+            <text x="365" y="135" style="font-size: 9px; fill: #047857; writing-mode: tb;" text-anchor="middle">BLOCK_N</text>
+            
+            <!-- Matrix C -->
+            <text x="600" y="30" style="font-size: 12px; font-weight: bold; fill: #dc2626;">C (M×N)</text>
+            <rect x="580" y="40" width="240" height="180" fill="#fee2e2" stroke="#ef4444" stroke-width="2" rx="4"/>
+            
+            <!-- Output tile in C -->
+            <rect x="640" y="80" width="50" height="40" fill="#fca5a5" stroke="#dc2626" stroke-width="2" rx="2"/>
+            <text x="665" y="105" style="font-size: 8px; fill: #b91c1c;" text-anchor="middle">Output</text>
+            <text x="665" y="117" style="font-size: 8px; fill: #b91c1c;" text-anchor="middle">tile</text>
+            
+            <!-- Arrows showing multiplication -->
+            <path d="M 235 100 L 275 100" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray)"/>
+            <path d="M 525 100 L 575 100" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray)"/>
+            <text x="550" y="95" style="font-size: 12px; fill: #475569;">=</text>
+            
+            <!-- K loop illustration -->
+            <rect x="50" y="260" width="800" height="70" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+            <text x="450" y="285" style="font-size: 11px; font-weight: bold; fill: #1e293b;" text-anchor="middle">Inner Loop: Accumulate over K dimension</text>
+            
+            <rect x="80" y="300" width="60" height="20" fill="#93c5fd" rx="2"/>
+            <text x="110" y="315" style="font-size: 8px; fill: #1e40af;" text-anchor="middle">A tile 0</text>
+            
+            <text x="150" y="315" style="font-size: 10px; fill: #475569;">×</text>
+            
+            <rect x="160" y="300" width="60" height="20" fill="#86efac" rx="2"/>
+            <text x="190" y="315" style="font-size: 8px; fill: #047857;" text-anchor="middle">B tile 0</text>
+            
+            <text x="230" y="315" style="font-size: 10px; fill: #475569;">+</text>
+            
+            <rect x="250" y="300" width="60" height="20" fill="#93c5fd" rx="2"/>
+            <text x="280" y="315" style="font-size: 8px; fill: #1e40af;" text-anchor="middle">A tile 1</text>
+            
+            <text x="320" y="315" style="font-size: 10px; fill: #475569;">×</text>
+            
+            <rect x="330" y="300" width="60" height="20" fill="#86efac" rx="2"/>
+            <text x="360" y="315" style="font-size: 8px; fill: #047857;" text-anchor="middle">B tile 1</text>
+            
+            <text x="400" y="315" style="font-size: 10px; fill: #475569;">+ ...</text>
+            
+            <text x="450" y="315" style="font-size: 10px; fill: #475569;">=</text>
+            
+            <rect x="470" y="300" width="60" height="20" fill="#fca5a5" rx="2"/>
+            <text x="500" y="315" style="font-size: 8px; fill: #b91c1c;" text-anchor="middle">C tile</text>
+            
+            <defs>
+              <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#475569"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="diagram-caption">Each program computes one BLOCK_M × BLOCK_N tile of output by iterating over K</div>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">matmul_triton.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> triton
+<span class="keyword">import</span> triton.language <span class="keyword">as</span> tl
+
+<span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">matmul_kernel</span>(
+    <span class="comment"># Pointers to matrices</span>
+    a_ptr, b_ptr, c_ptr,
+    <span class="comment"># Matrix dimensions</span>
+    M, N, K,
+    <span class="comment"># Strides (elements to skip for next row/col)</span>
+    stride_am, stride_ak,
+    stride_bk, stride_bn,
+    stride_cm, stride_cn,
+    <span class="comment"># Block sizes (compile-time constants)</span>
+    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
+):
+    <span class="string">"""Compute C = A @ B for one output tile."""</span>
+    <span class="comment"># Program ID for 2D grid</span>
+    pid_m = tl.<span class="function">program_id</span>(<span class="number">0</span>)  <span class="comment"># Which row block</span>
+    pid_n = tl.<span class="function">program_id</span>(<span class="number">1</span>)  <span class="comment"># Which col block</span>
+    
+    <span class="comment"># Compute starting positions</span>
+    offs_m = pid_m * BLOCK_M + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_M)
+    offs_n = pid_n * BLOCK_N + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_N)
+    offs_k = tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_K)
+    
+    <span class="comment"># Pointers to first tiles of A and B</span>
+    a_ptrs = a_ptr + offs_m[:, <span class="keyword">None</span>] * stride_am + offs_k[<span class="keyword">None</span>, :] * stride_ak
+    b_ptrs = b_ptr + offs_k[:, <span class="keyword">None</span>] * stride_bk + offs_n[<span class="keyword">None</span>, :] * stride_bn
+    
+    <span class="comment"># Accumulator for output tile (in registers)</span>
+    acc = tl.<span class="function">zeros</span>((BLOCK_M, BLOCK_N), dtype=tl.float32)
+    
+    <span class="comment"># Loop over K dimension in blocks</span>
+    <span class="keyword">for</span> k <span class="keyword">in</span> <span class="builtin">range</span>(<span class="number">0</span>, K, BLOCK_K):
+        <span class="comment"># Load tiles with boundary masking</span>
+        a_mask = (offs_m[:, <span class="keyword">None</span>] < M) & (offs_k[<span class="keyword">None</span>, :] + k < K)
+        b_mask = (offs_k[:, <span class="keyword">None</span>] + k < K) & (offs_n[<span class="keyword">None</span>, :] < N)
+        
+        a = tl.<span class="function">load</span>(a_ptrs, mask=a_mask, other=<span class="number">0.0</span>)
+        b = tl.<span class="function">load</span>(b_ptrs, mask=b_mask, other=<span class="number">0.0</span>)
+        
+        <span class="comment"># Multiply and accumulate</span>
+        acc += tl.<span class="function">dot</span>(a, b)  <span class="comment"># Uses Tensor Cores if available!</span>
+        
+        <span class="comment"># Advance pointers to next K block</span>
+        a_ptrs += BLOCK_K * stride_ak
+        b_ptrs += BLOCK_K * stride_bk
+    
+    <span class="comment"># Store output tile</span>
+    c_ptrs = c_ptr + offs_m[:, <span class="keyword">None</span>] * stride_cm + offs_n[<span class="keyword">None</span>, :] * stride_cn
+    c_mask = (offs_m[:, <span class="keyword">None</span>] < M) & (offs_n[<span class="keyword">None</span>, :] < N)
+    tl.<span class="function">store</span>(c_ptrs, acc, mask=c_mask)
+
+
+<span class="keyword">def</span> <span class="function">matmul</span>(a, b):
+    <span class="string">"""Triton matrix multiplication: C = A @ B"""</span>
+    M, K = a.shape
+    K, N = b.shape
+    c = torch.<span class="function">empty</span>((M, N), device=a.device, dtype=a.dtype)
+    
+    <span class="comment"># Block sizes (tunable)</span>
+    BLOCK_M, BLOCK_N, BLOCK_K = <span class="number">128</span>, <span class="number">128</span>, <span class="number">32</span>
+    
+    <span class="comment"># 2D grid of programs</span>
+    grid = (
+        triton.<span class="function">cdiv</span>(M, BLOCK_M),
+        triton.<span class="function">cdiv</span>(N, BLOCK_N),
+    )
+    
+    <span class="function">matmul_kernel</span>[grid](
+        a, b, c,
+        M, N, K,
+        a.stride(<span class="number">0</span>), a.stride(<span class="number">1</span>),
+        b.stride(<span class="number">0</span>), b.stride(<span class="number">1</span>),
+        c.stride(<span class="number">0</span>), c.stride(<span class="number">1</span>),
+        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, BLOCK_K=BLOCK_K,
+    )
+    <span class="keyword">return</span> c
+</code></pre>
+        </div>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-lightbulb"></i> tl.dot() Uses Tensor Cores</div>
+          <p>When block sizes are multiples of 16 and using FP16/BF16 inputs, Triton's <code>tl.dot()</code> automatically uses Tensor Cores for massive speedup (>10x over FP32 CUDA cores).</p>
+        </div>
+
+        <!-- SECTION 6: Fused Operations -->
+        <h2 id="fused-ops">6. Fused Operations</h2>
+
+        <p>The real power of Triton is <strong>kernel fusion</strong> - combining multiple operations to avoid memory round-trips:</p>
+
+        <div class="diagram-container">
+          <div class="diagram-title">Why Fusion Matters</div>
+          <svg viewBox="0 0 900 200" style="max-width: 100%;">
+            <!-- Unfused -->
+            <text x="200" y="25" style="font-size: 12px; font-weight: bold; fill: #dc2626;" text-anchor="middle">Unfused (3 kernel launches)</text>
+            <rect x="50" y="40" width="80" height="40" fill="#fee2e2" stroke="#ef4444" rx="4"/>
+            <text x="90" y="65" style="font-size: 10px; fill: #b91c1c;" text-anchor="middle">exp(x)</text>
+            
+            <path d="M 135 60 L 155 60" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray2)"/>
+            
+            <rect x="160" y="35" width="40" height="50" fill="#cbd5e1" rx="4"/>
+            <text x="180" y="65" style="font-size: 8px; fill: #475569;" text-anchor="middle">HBM</text>
+            
+            <path d="M 205 60 L 225 60" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray2)"/>
+            
+            <rect x="230" y="40" width="80" height="40" fill="#fee2e2" stroke="#ef4444" rx="4"/>
+            <text x="270" y="65" style="font-size: 10px; fill: #b91c1c;" text-anchor="middle">sum()</text>
+            
+            <path d="M 315 60 L 335 60" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray2)"/>
+            
+            <rect x="340" y="35" width="40" height="50" fill="#cbd5e1" rx="4"/>
+            
+            <path d="M 385 60 L 405 60" stroke="#475569" stroke-width="2" marker-end="url(#arrowGray2)"/>
+            
+            <rect x="410" y="40" width="80" height="40" fill="#fee2e2" stroke="#ef4444" rx="4"/>
+            <text x="450" y="65" style="font-size: 10px; fill: #b91c1c;" text-anchor="middle">div()</text>
+            
+            <text x="270" y="110" style="font-size: 10px; fill: #dc2626;" text-anchor="middle">6 memory operations (read + write × 3)</text>
+            
+            <!-- Fused -->
+            <text x="700" y="25" style="font-size: 12px; font-weight: bold; fill: #059669;" text-anchor="middle">Fused (1 kernel launch)</text>
+            <rect x="580" y="40" width="240" height="40" fill="#dcfce7" stroke="#10b981" stroke-width="2" rx="4"/>
+            <text x="700" y="65" style="font-size: 10px; fill: #047857;" text-anchor="middle">fused_softmax(x) = exp(x) / sum(exp(x))</text>
+            
+            <text x="700" y="110" style="font-size: 10px; fill: #059669;" text-anchor="middle">2 memory operations (1 read + 1 write)</text>
+            
+            <!-- Speedup arrow -->
+            <text x="700" y="150" style="font-size: 14px; font-weight: bold; fill: #059669;" text-anchor="middle">~3x faster (memory bound)</text>
+            
+            <defs>
+              <marker id="arrowGray2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                <polygon points="0,0 10,5 0,10" fill="#475569"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+
+        <h3 id="fused-softmax">Fused Softmax</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">fused_softmax.py</span>
+          </div>
+          <pre><code><span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">softmax_kernel</span>(
+    input_ptr, output_ptr,
+    n_cols,
+    input_row_stride, output_row_stride,
+    BLOCK_SIZE: tl.constexpr,
+):
+    <span class="string">"""Compute softmax for one row."""</span>
+    <span class="comment"># Each program handles one row</span>
+    row_idx = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+    
+    <span class="comment"># Pointers to row start</span>
+    row_start_ptr = input_ptr + row_idx * input_row_stride
+    col_offsets = tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_SIZE)
+    
+    <span class="comment"># Load row with masking</span>
+    mask = col_offsets < n_cols
+    row = tl.<span class="function">load</span>(row_start_ptr + col_offsets, mask=mask, other=-<span class="builtin">float</span>(<span class="string">'inf'</span>))
+    
+    <span class="comment"># Numerically stable softmax</span>
+    <span class="comment"># 1. Subtract max for numerical stability</span>
+    row_max = tl.<span class="function">max</span>(row, axis=<span class="number">0</span>)
+    row = row - row_max
+    
+    <span class="comment"># 2. Exponentiate</span>
+    numerator = tl.<span class="function">exp</span>(row)
+    
+    <span class="comment"># 3. Sum and divide</span>
+    denominator = tl.<span class="function">sum</span>(numerator, axis=<span class="number">0</span>)
+    softmax_output = numerator / denominator
+    
+    <span class="comment"># Store result</span>
+    output_row_ptr = output_ptr + row_idx * output_row_stride
+    tl.<span class="function">store</span>(output_row_ptr + col_offsets, softmax_output, mask=mask)
+
+
+<span class="keyword">def</span> <span class="function">softmax</span>(x):
+    <span class="string">"""Fused softmax over last dimension."""</span>
+    n_rows, n_cols = x.shape
+    
+    <span class="comment"># BLOCK_SIZE must be power of 2 and >= n_cols</span>
+    BLOCK_SIZE = triton.<span class="function">next_power_of_2</span>(n_cols)
+    
+    y = torch.<span class="function">empty_like</span>(x)
+    
+    <span class="comment"># One program per row</span>
+    grid = (n_rows,)
+    
+    <span class="function">softmax_kernel</span>[grid](
+        x, y,
+        n_cols,
+        x.stride(<span class="number">0</span>), y.stride(<span class="number">0</span>),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+    <span class="keyword">return</span> y
+</code></pre>
+        </div>
+
+        <h3 id="fused-layernorm">Fused LayerNorm</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">fused_layernorm.py</span>
+          </div>
+          <pre><code><span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">layernorm_kernel</span>(
+    x_ptr, y_ptr, weight_ptr, bias_ptr,
+    n_cols, eps,
+    x_row_stride,
+    BLOCK_SIZE: tl.constexpr,
+):
+    <span class="string">"""LayerNorm: y = (x - mean) / sqrt(var + eps) * weight + bias"""</span>
+    row_idx = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+    
+    <span class="comment"># Offsets for this row</span>
+    col_offsets = tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_SIZE)
+    mask = col_offsets < n_cols
+    
+    <span class="comment"># Load input row</span>
+    x_ptr += row_idx * x_row_stride
+    x = tl.<span class="function">load</span>(x_ptr + col_offsets, mask=mask, other=<span class="number">0.0</span>).to(tl.float32)
+    
+    <span class="comment"># Compute mean</span>
+    mean = tl.<span class="function">sum</span>(x, axis=<span class="number">0</span>) / n_cols
+    
+    <span class="comment"># Compute variance</span>
+    x_centered = tl.<span class="function">where</span>(mask, x - mean, <span class="number">0.0</span>)
+    var = tl.<span class="function">sum</span>(x_centered * x_centered, axis=<span class="number">0</span>) / n_cols
+    
+    <span class="comment"># Normalize</span>
+    rstd = <span class="number">1.0</span> / tl.<span class="function">sqrt</span>(var + eps)
+    x_norm = x_centered * rstd
+    
+    <span class="comment"># Scale and shift (load weight and bias)</span>
+    weight = tl.<span class="function">load</span>(weight_ptr + col_offsets, mask=mask)
+    bias = tl.<span class="function">load</span>(bias_ptr + col_offsets, mask=mask)
+    y = x_norm * weight + bias
+    
+    <span class="comment"># Store</span>
+    y_ptr += row_idx * x_row_stride
+    tl.<span class="function">store</span>(y_ptr + col_offsets, y, mask=mask)
+
+
+<span class="keyword">def</span> <span class="function">layer_norm</span>(x, weight, bias, eps=<span class="number">1e-5</span>):
+    <span class="string">"""Fused LayerNorm."""</span>
+    n_rows = x.<span class="function">numel</span>() // x.shape[-<span class="number">1</span>]
+    n_cols = x.shape[-<span class="number">1</span>]
+    
+    x_flat = x.<span class="function">view</span>(n_rows, n_cols)
+    y = torch.<span class="function">empty_like</span>(x_flat)
+    
+    BLOCK_SIZE = triton.<span class="function">next_power_of_2</span>(n_cols)
+    grid = (n_rows,)
+    
+    <span class="function">layernorm_kernel</span>[grid](
+        x_flat, y, weight, bias,
+        n_cols, eps,
+        x_flat.stride(<span class="number">0</span>),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+    <span class="keyword">return</span> y.<span class="function">view_as</span>(x)
+</code></pre>
+        </div>
+
+        <!-- SECTION 7: Autotuning -->
+        <h2 id="autotuning">7. Autotuning for Performance</h2>
+
+        <p>Triton's killer feature: <strong>automatic tuning</strong> of block sizes and other parameters:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">autotuned_matmul.py</span>
+          </div>
+          <pre><code><span class="decorator">@triton.autotune</span>(
+    configs=[
+        triton.<span class="function">Config</span>({<span class="string">'BLOCK_M'</span>: <span class="number">128</span>, <span class="string">'BLOCK_N'</span>: <span class="number">256</span>, <span class="string">'BLOCK_K'</span>: <span class="number">32</span>}, num_warps=<span class="number">8</span>),
+        triton.<span class="function">Config</span>({<span class="string">'BLOCK_M'</span>: <span class="number">256</span>, <span class="string">'BLOCK_N'</span>: <span class="number">128</span>, <span class="string">'BLOCK_K'</span>: <span class="number">32</span>}, num_warps=<span class="number">8</span>),
+        triton.<span class="function">Config</span>({<span class="string">'BLOCK_M'</span>: <span class="number">128</span>, <span class="string">'BLOCK_N'</span>: <span class="number">128</span>, <span class="string">'BLOCK_K'</span>: <span class="number">32</span>}, num_warps=<span class="number">8</span>),
+        triton.<span class="function">Config</span>({<span class="string">'BLOCK_M'</span>: <span class="number">64</span>, <span class="string">'BLOCK_N'</span>: <span class="number">256</span>, <span class="string">'BLOCK_K'</span>: <span class="number">32</span>}, num_warps=<span class="number">4</span>),
+        triton.<span class="function">Config</span>({<span class="string">'BLOCK_M'</span>: <span class="number">64</span>, <span class="string">'BLOCK_N'</span>: <span class="number">128</span>, <span class="string">'BLOCK_K'</span>: <span class="number">32</span>}, num_warps=<span class="number">4</span>),
+    ],
+    key=[<span class="string">'M'</span>, <span class="string">'N'</span>, <span class="string">'K'</span>],  <span class="comment"># Retune when these change</span>
+)
+<span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">matmul_kernel_autotuned</span>(
+    a_ptr, b_ptr, c_ptr,
+    M, N, K,
+    stride_am, stride_ak,
+    stride_bk, stride_bn,
+    stride_cm, stride_cn,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+):
+    <span class="comment"># Same kernel code as before...</span>
+    <span class="comment"># Triton will try all configs and pick the fastest!</span>
+    ...
+</code></pre>
+        </div>
+
+        <div class="info-box note">
+          <div class="info-box-title"><i class="fas fa-info-circle"></i> How Autotuning Works</div>
+          <p>The first time your kernel runs with new dimensions, Triton benchmarks all configurations randomly for ~20ms total, then caches the best one. Subsequent calls use the cached config instantly.</p>
+        </div>
+
+        <!-- SECTION 8: PyTorch Integration -->
+        <h2 id="pytorch-integration">8. PyTorch Integration</h2>
+
+        <p>Triton kernels integrate seamlessly with PyTorch autograd:</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">pytorch_integration.py</span>
+          </div>
+          <pre><code><span class="keyword">import</span> torch
+<span class="keyword">from</span> torch.autograd <span class="keyword">import</span> Function
+
+<span class="keyword">class</span> <span class="type">TritonSoftmax</span>(Function):
+    <span class="decorator">@staticmethod</span>
+    <span class="keyword">def</span> <span class="function">forward</span>(ctx, x):
+        <span class="comment"># Run forward kernel</span>
+        y = softmax(x)  <span class="comment"># Our Triton kernel</span>
+        ctx.<span class="function">save_for_backward</span>(y)
+        <span class="keyword">return</span> y
+    
+    <span class="decorator">@staticmethod</span>
+    <span class="keyword">def</span> <span class="function">backward</span>(ctx, grad_output):
+        <span class="comment"># Softmax backward: dy * (y - y * sum(dy * y))</span>
+        y, = ctx.saved_tensors
+        <span class="comment"># Could also implement backward as Triton kernel!</span>
+        grad_input = grad_output * y - y * (grad_output * y).<span class="function">sum</span>(dim=-<span class="number">1</span>, keepdim=<span class="keyword">True</span>)
+        <span class="keyword">return</span> grad_input
+
+
+<span class="comment"># Use in models</span>
+<span class="keyword">def</span> <span class="function">triton_softmax</span>(x):
+    <span class="keyword">return</span> TritonSoftmax.<span class="function">apply</span>(x)
+
+
+<span class="comment"># Example: Custom attention with Triton</span>
+<span class="keyword">class</span> <span class="type">TritonAttention</span>(torch.nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, d_model, n_heads):
+        <span class="builtin">super</span>().<span class="function">__init__</span>()
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = torch.nn.<span class="function">Linear</span>(d_model, <span class="number">3</span> * d_model)
+        self.out = torch.nn.<span class="function">Linear</span>(d_model, d_model)
+    
+    <span class="keyword">def</span> <span class="function">forward</span>(self, x):
+        B, T, C = x.shape
+        qkv = self.<span class="function">qkv</span>(x).<span class="function">view</span>(B, T, <span class="number">3</span>, self.n_heads, self.d_head)
+        q, k, v = qkv.<span class="function">unbind</span>(<span class="number">2</span>)
+        
+        <span class="comment"># Attention scores</span>
+        scores = torch.<span class="function">einsum</span>(<span class="string">'bthd,bshd->bhts'</span>, q, k) / (self.d_head ** <span class="number">0.5</span>)
+        
+        <span class="comment"># Use our Triton softmax!</span>
+        attn = <span class="function">triton_softmax</span>(scores)
+        
+        out = torch.<span class="function">einsum</span>(<span class="string">'bhts,bshd->bthd'</span>, attn, v)
+        <span class="keyword">return</span> self.<span class="function">out</span>(out.<span class="function">reshape</span>(B, T, C))
+</code></pre>
+        </div>
+
+        <!-- SECTION 9: Debugging -->
+        <h2 id="debugging">9. Debugging & Profiling</h2>
+
+        <h4>Print Debugging</h4>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">debugging.py</span>
+          </div>
+          <pre><code><span class="decorator">@triton.jit</span>
+<span class="keyword">def</span> <span class="function">debug_kernel</span>(x_ptr, n, BLOCK: tl.constexpr):
+    pid = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+    offs = pid * BLOCK + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK)
+    
+    x = tl.<span class="function">load</span>(x_ptr + offs, mask=offs < n)
+    
+    <span class="comment"># Debug print (only on first program!)</span>
+    <span class="keyword">if</span> pid == <span class="number">0</span>:
+        tl.<span class="function">device_print</span>(<span class="string">"First block values:"</span>, x)
+        tl.<span class="function">device_print</span>(<span class="string">"Max:"</span>, tl.<span class="function">max</span>(x))
+
+
+<span class="comment"># Set environment for debugging</span>
+<span class="keyword">import</span> os
+os.environ[<span class="string">"TRITON_PRINT_AUTOTUNING"</span>] = <span class="string">"1"</span>  <span class="comment"># Show autotuning</span>
+os.environ[<span class="string">"TRITON_INTERPRET"</span>] = <span class="string">"1"</span>  <span class="comment"># Run on CPU for debugging</span>
+</code></pre>
+        </div>
+
+        <h4>Profiling with Nsight</h4>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Bash</span>
+            <span class="code-filename">profile.sh</span>
+          </div>
+          <pre><code><span class="comment"># Profile with Nsight Systems</span>
+nsys profile -o triton_trace python my_triton_script.py
+
+<span class="comment"># Profile with Nsight Compute (detailed kernel analysis)</span>
+ncu --set full -o triton_kernel python my_triton_script.py
+
+<span class="comment"># In Python: use built-in timing</span>
+<span class="keyword">import</span> triton.testing
+
+<span class="decorator">@triton.testing.perf_report</span>(
+    triton.testing.<span class="function">Benchmark</span>(
+        x_names=[<span class="string">'N'</span>],
+        x_vals=[<span class="number">2</span>**i <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(<span class="number">10</span>, <span class="number">25</span>)],
+        line_arg=<span class="string">'provider'</span>,
+        line_vals=[<span class="string">'triton'</span>, <span class="string">'torch'</span>],
+        line_names=[<span class="string">'Triton'</span>, <span class="string">'PyTorch'</span>],
+        ylabel=<span class="string">'GB/s'</span>,
+        plot_name=<span class="string">'vector-add-performance'</span>,
+    )
+)
+<span class="keyword">def</span> <span class="function">benchmark</span>(N, provider):
+    x = torch.<span class="function">randn</span>(N, device=<span class="string">'cuda'</span>, dtype=torch.float32)
+    y = torch.<span class="function">randn</span>(N, device=<span class="string">'cuda'</span>, dtype=torch.float32)
+    
+    <span class="keyword">if</span> provider == <span class="string">'triton'</span>:
+        ms = triton.testing.<span class="function">do_bench</span>(<span class="keyword">lambda</span>: <span class="function">vector_add</span>(x, y))
+    <span class="keyword">else</span>:
+        ms = triton.testing.<span class="function">do_bench</span>(<span class="keyword">lambda</span>: x + y)
+    
+    gbps = <span class="number">3</span> * N * <span class="number">4</span> / ms * <span class="number">1e-6</span>  <span class="comment"># 3 arrays × N elements × 4 bytes</span>
+    <span class="keyword">return</span> gbps
+
+<span class="function">benchmark.run</span>(print_data=<span class="keyword">True</span>, show_plots=<span class="keyword">True</span>)
+</code></pre>
+        </div>
+
+        <!-- SECTION 10: Best Practices -->
+        <h2 id="best-practices">10. Best Practices & Patterns</h2>
+
+        <div class="info-box tip">
+          <div class="info-box-title"><i class="fas fa-check-circle"></i> Do's</div>
+          <p>
+            <strong>✓ Use power-of-2 block sizes</strong> - Required for many operations<br>
+            <strong>✓ Always use masks</strong> - Even if you think data is aligned<br>
+            <strong>✓ Accumulate in FP32</strong> - Then cast to FP16/BF16 for output<br>
+            <strong>✓ Fuse memory-bound ops</strong> - Biggest wins come from avoiding memory traffic<br>
+            <strong>✓ Use autotuning</strong> - Let Triton find optimal parameters
+          </p>
+        </div>
+
+        <div class="info-box warning">
+          <div class="info-box-title"><i class="fas fa-times-circle"></i> Don'ts</div>
+          <p>
+            <strong>✗ Don't use dynamic shapes in loops</strong> - Must be compile-time constant<br>
+            <strong>✗ Don't forget stride parameters</strong> - Non-contiguous tensors need them<br>
+            <strong>✗ Don't mix integer and float carelessly</strong> - Explicit casts required<br>
+            <strong>✗ Don't ignore numerical stability</strong> - Subtract max before softmax, etc.
+          </p>
+        </div>
+
+        <h3>Common Patterns</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Python</span>
+            <span class="code-filename">common_patterns.py</span>
+          </div>
+          <pre><code><span class="comment"># Pattern 1: Row-wise operations (one program per row)</span>
+row_idx = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+col_offs = tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_SIZE)
+ptr = base_ptr + row_idx * row_stride + col_offs
+
+<span class="comment"># Pattern 2: 2D tiling (programs form a grid)</span>
+pid_m = tl.<span class="function">program_id</span>(<span class="number">0</span>)
+pid_n = tl.<span class="function">program_id</span>(<span class="number">1</span>)
+offs_m = pid_m * BLOCK_M + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_M)
+offs_n = pid_n * BLOCK_N + tl.<span class="function">arange</span>(<span class="number">0</span>, BLOCK_N)
+
+<span class="comment"># Pattern 3: Reduction within block</span>
+x = tl.<span class="function">load</span>(...)
+total = tl.<span class="function">sum</span>(x, axis=<span class="number">0</span>)  <span class="comment"># Reduces BLOCK_SIZE elements to 1</span>
+
+<span class="comment"># Pattern 4: Broadcasting</span>
+a = tl.<span class="function">load</span>(...)  <span class="comment"># shape: (BLOCK_M,)</span>
+b = tl.<span class="function">load</span>(...)  <span class="comment"># shape: (BLOCK_N,)</span>
+c = a[:, <span class="keyword">None</span>] + b[<span class="keyword">None</span>, :]  <span class="comment"># shape: (BLOCK_M, BLOCK_N)</span>
+
+<span class="comment"># Pattern 5: Conditional computation</span>
+result = tl.<span class="function">where</span>(condition, value_if_true, value_if_false)
+
+<span class="comment"># Pattern 6: Atomic operations (for reductions across programs)</span>
+tl.<span class="function">atomic_add</span>(ptr, value)  <span class="comment"># Thread-safe accumulation</span>
+</code></pre>
+        </div>
+
+        <!-- Summary -->
+        <h2 id="summary">Summary & Resources</h2>
+
+        <div class="diagram-container">
+          <div class="diagram-title">When to Use Triton vs Alternatives</div>
+          <svg viewBox="0 0 900 200" style="max-width: 100%;">
+            <rect x="50" y="30" width="250" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="8"/>
+            <text x="175" y="55" style="font-size: 11px; font-weight: bold; fill: #1e40af;" text-anchor="middle">Use PyTorch/JAX</text>
+            <text x="175" y="75" style="font-size: 9px; fill: #1e40af;" text-anchor="middle">Standard ops, quick prototyping</text>
+            
+            <rect x="325" y="30" width="250" height="60" fill="#fff7ed" stroke="#f97316" stroke-width="2" rx="8"/>
+            <text x="450" y="55" style="font-size: 11px; font-weight: bold; fill: #ea580c;" text-anchor="middle">Use Triton ⭐</text>
+            <text x="450" y="75" style="font-size: 9px; fill: #ea580c;" text-anchor="middle">Custom fusions, research, Flash Attention</text>
+            
+            <rect x="600" y="30" width="250" height="60" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+            <text x="725" y="55" style="font-size: 11px; font-weight: bold; fill: #92400e;" text-anchor="middle">Use CUDA C++</text>
+            <text x="725" y="75" style="font-size: 9px; fill: #92400e;" text-anchor="middle">Maximum control, exotic hardware</text>
+            
+            <!-- Decision flow -->
+            <text x="450" y="130" style="font-size: 11px; fill: #475569;" text-anchor="middle">Performance critical? → Need custom ops? → Need Tensor Cores/special hardware?</text>
+            <text x="450" y="150" style="font-size: 10px; fill: #64748b;" text-anchor="middle">No → PyTorch | Yes + research → Triton | Yes + production → CUDA (or Triton with autotuning)</text>
+          </svg>
+        </div>
+
+        <p><strong>Key takeaways:</strong></p>
+        <ul>
+          <li>Triton makes GPU programming accessible with Python-like syntax</li>
+          <li>Think in <strong>blocks</strong>, not threads - Triton handles the details</li>
+          <li><strong>Kernel fusion</strong> is where the real gains are (avoid memory round-trips)</li>
+          <li>Use <strong>autotuning</strong> - don't guess block sizes</li>
+          <li><strong>Always mask</strong> boundary accesses</li>
+        </ul>
+
+        <p><strong>Resources:</strong></p>
+        <ul>
+          <li><a href="https://triton-lang.org/main/getting-started/tutorials/" target="_blank">Official Triton Tutorials</a></li>
+          <li><a href="https://github.com/openai/triton" target="_blank">Triton GitHub Repository</a></li>
+          <li><a href="https://pytorch.org/docs/stable/torch.compiler.html" target="_blank">PyTorch torch.compile() with Triton backend</a></li>
+        </ul>
+
+      </div>
+
+      <!-- Navigation -->
+      <div class="post-navigation">
+        <a href="cuda-memory-hierarchy.html" class="post-nav-item prev">
+          <span class="post-nav-label">← Previous</span>
+          <span class="post-nav-title">CUDA Memory Hierarchy</span>
+        </a>
+        <a href="nsight-profiling.html" class="post-nav-item next">
+          <span class="post-nav-label">Next →</span>
+          <span class="post-nav-title">Nsight Profiling</span>
+        </a>
+      </div>
+    </article>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; 2026 Alireza Olama. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="https://scholar.google.com/citations?user=km4oc50AAAAJ&hl=en" target="_blank" rel="noreferrer"><i class="fas fa-graduation-cap"></i></a>
+          <a href="https://github.com/alirezalm" target="_blank" rel="noreferrer"><i class="fab fa-github"></i></a>
+          <a href="https://www.linkedin.com/in/alireza-olama-213a6a107/" target="_blank" rel="noreferrer"><i class="fab fa-linkedin"></i></a>
+          <a href="https://www.youtube.com/@HPC4AI" target="_blank" rel="noreferrer"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Theme toggle
+      function toggleTheme() {
+        const body = document.body;
+        const icon = document.querySelector('.theme-toggle i');
+        body.classList.toggle('dark-mode');
+        
+        if (body.classList.contains('dark-mode')) {
+          icon.classList.remove('fa-moon');
+          icon.classList.add('fa-sun');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          icon.classList.remove('fa-sun');
+          icon.classList.add('fa-moon');
+          localStorage.setItem('theme', 'light');
+        }
+      }
+
+      // Check for saved theme
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const icon = document.querySelector('.theme-toggle i');
+        if (savedTheme === 'dark') {
+          document.body.classList.add('dark-mode');
+          if (icon) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
