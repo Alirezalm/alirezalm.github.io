@@ -7,6 +7,21 @@
     <meta name="description" content="Alireza Olama - Postdoctoral Researcher specializing in energy-efficient machine learning systems, distributed training, sparsity-aware optimization, and hardware-software co-design at Åbo Akademi University." />
     <meta name="keywords" content="Alireza Olama, MLSys, machine learning systems, distributed training, sparsity, pruning, HPC, GPU programming, Åbo Akademi" />
     <meta name="author" content="Alireza Olama" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://alirezalm.github.io/" />
+    <meta property="og:title" content="Alireza Olama | Machine Learning Systems Researcher" />
+    <meta property="og:description" content="Postdoctoral Researcher specializing in energy-efficient ML systems, distributed training, and hardware-software co-design at Åbo Akademi University." />
+    <meta property="og:image" content="https://alirezalm.github.io/photo.jpg" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Alireza Olama | ML Systems Researcher" />
+    <meta name="twitter:description" content="Postdoctoral Researcher specializing in energy-efficient ML systems and distributed training." />
+    <meta name="twitter:image" content="https://alirezalm.github.io/photo.jpg" />
+    
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,7 +35,13 @@
     <header class="hero">
       <nav class="nav">
         <div class="logo">AO</div>
+        <button class="hamburger" onclick="toggleMenu()" aria-label="Toggle menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <div class="nav-links">
+          <a href="#news">News</a>
           <a href="#about">About</a>
           <a href="#research">Research</a>
           <a href="#publications">Publications</a>
@@ -80,7 +101,44 @@
     </header>
 
     <main>
-      <section id="about" class="section">
+      <section id="news" class="section">
+        <div class="section-title">
+          <h2>News & Updates</h2>
+          <p>Recent activities, publications, and announcements.</p>
+        </div>
+        <div class="news-list">
+          <article class="news-item">
+            <span class="news-date">Feb 2025</span>
+            <div class="news-content">
+              <h3>Paper submitted to ACM ICS 2026</h3>
+              <p>PruneX: A Hierarchical Communication-Efficient System for Distributed CNN Training with Structured Pruning</p>
+            </div>
+          </article>
+          <article class="news-item">
+            <span class="news-date">Feb 2025</span>
+            <div class="news-content">
+              <h3>Paper submitted to ICLR 2026</h3>
+              <p>Federated Learning With ℓ0 Constraint Via Probabilistic Gates For Sparsity</p>
+            </div>
+          </article>
+          <article class="news-item">
+            <span class="news-date">Spring 2025</span>
+            <div class="news-content">
+              <h3>Teaching: Parallel Programming & GPU Programming</h3>
+              <p>New courses at Åbo Akademi University with hands-on access to LUMI, Puhti, and Mahti supercomputers</p>
+            </div>
+          </article>
+          <article class="news-item">
+            <span class="news-date">Dec 2023</span>
+            <div class="news-content">
+              <h3>Joined Åbo Akademi University</h3>
+              <p>Started as Postdoctoral Researcher in Information Technology Department</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="section alt">
         <div class="section-title">
           <h2>About Me</h2>
           <p>
@@ -120,7 +178,7 @@
         </div>
       </section>
 
-      <section id="research" class="section alt">
+      <section id="research" class="section">
         <div class="section-title">
           <h2>Research</h2>
           <p>
@@ -167,7 +225,7 @@
         </div>
       </section>
 
-      <section id="publications" class="section">
+      <section id="publications" class="section alt">
         <div class="section-title">
           <h2>Selected Publications</h2>
           <p>
@@ -221,7 +279,7 @@
         </div>
       </section>
 
-      <section id="teaching" class="section alt">
+      <section id="teaching" class="section">
         <div class="section-title">
           <h2>Teaching</h2>
           <p>
@@ -366,7 +424,13 @@
       </div>
     </footer>
 
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" onclick="scrollToTop()" title="Back to top">
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
     <script>
+      // Theme Toggle
       function toggleTheme() {
         const body = document.body;
         const icon = document.querySelector('.theme-toggle i');
@@ -393,6 +457,37 @@
           icon.classList.add('fa-sun');
         }
       })();
+
+      // Mobile Menu Toggle
+      function toggleMenu() {
+        const navLinks = document.querySelector('.nav-links');
+        const hamburger = document.querySelector('.hamburger');
+        navLinks.classList.toggle('active');
+        hamburger.classList.toggle('active');
+      }
+
+      // Close menu when clicking a link
+      document.querySelectorAll('.nav-links a').forEach(link => {
+        link.addEventListener('click', () => {
+          document.querySelector('.nav-links').classList.remove('active');
+          document.querySelector('.hamburger').classList.remove('active');
+        });
+      });
+
+      // Scroll to Top
+      function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Show/hide scroll button based on scroll position
+      window.addEventListener('scroll', () => {
+        const scrollBtn = document.querySelector('.scroll-top');
+        if (window.scrollY > 500) {
+          scrollBtn.classList.add('visible');
+        } else {
+          scrollBtn.classList.remove('visible');
+        }
+      });
     </script>
   </body>
 </html>
