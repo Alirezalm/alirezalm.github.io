@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIMD: From Hardware to Software — Complete Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b0f;
+  --bg2: #111318;
+  --bg3: #181b24;
+  --surface: #1e2230;
+  --surface2: #252a3a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaf0;
+  --text2: #9aa0b8;
+  --text3: #5c6380;
+  --accent: #5b8fff;
+  --accent2: #7b6fff;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --teal: #2dd4bf;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Sora', sans-serif;
+  --sans2: 'Space Grotesk', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ── Navigation ── */
+#nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(10,11,15,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.nav-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-right: 2rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+
+.nav-links a {
+  font-size: 12px;
+  color: var(--text3);
+  text-decoration: none;
+  padding: 0 12px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  transition: color 0.2s;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  font-family: var(--sans2);
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── Layout ── */
+main {
+  padding-top: 56px;
+}
+
+section {
+  padding: 80px 0;
+  position: relative;
+}
+
+section:nth-child(even) .section-inner {
+  background: transparent;
+}
+
+.section-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* ── Hero ── */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(91,143,255,0.12) 0%, transparent 70%);
+  padding-top: 80px;
+}
+
+.hero-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(91,143,255,0.08);
+  border: 1px solid rgba(91,143,255,0.2);
+  border-radius: 100px;
+  padding: 4px 14px;
+  margin-bottom: 24px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+  font-family: var(--sans);
+}
+
+.hero-title .highlight {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--text2);
+  max-width: 620px;
+  margin-bottom: 40px;
+  font-weight: 300;
+  line-height: 1.8;
+}
+
+.hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.chip-blue { background: rgba(91,143,255,0.12); color: var(--accent); border: 1px solid rgba(91,143,255,0.2); }
+.chip-green { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.chip-amber { background: rgba(251,191,36,0.1); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+.chip-purple { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+.chip-teal { background: rgba(45,212,191,0.1); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+.chip-red { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+/* ── Section headers ── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.section-intro {
+  font-size: 1.05rem;
+  color: var(--text2);
+  max-width: 700px;
+  margin-bottom: 40px;
+  font-weight: 300;
+  line-height: 1.8;
+}
+
+/* ── Prose ── */
+.prose h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 2.5rem 0 0.8rem;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.prose h4 {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+  margin: 2rem 0 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.prose p {
+  color: var(--text2);
+  margin-bottom: 1rem;
+  line-height: 1.85;
+}
+
+.prose p + p { margin-top: 0.2rem; }
+
+.prose strong { color: var(--text); font-weight: 600; }
+
+.prose em { color: var(--teal); font-style: normal; font-weight: 500; }
+
+/* ── Code blocks ── */
+.code-block {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-lang {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.code-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.code-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-red { background: #ff5f57; }
+.dot-amber { background: #ffbd2e; }
+.dot-green { background: #28c840; }
+
+pre {
+  padding: 20px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+pre::-webkit-scrollbar { height: 4px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.kw { color: #c792ea; }
+.fn { color: #82aaff; }
+.str { color: #c3e88d; }
+.num { color: #f78c6c; }
+.cmt { color: var(--text3); font-style: italic; }
+.type { color: #ffcb6b; }
+.op { color: var(--teal); }
+.macro { color: #89ddff; }
+.reg { color: #f07178; }
+.dir { color: #c792ea; }
+
+/* ── Info boxes ── */
+.info-box {
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 1.5rem 0;
+  border-left: 3px solid;
+}
+
+.info-box.note {
+  background: rgba(91,143,255,0.06);
+  border-color: var(--accent);
+}
+
+.info-box.warn {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--amber);
+}
+
+.info-box.tip {
+  background: rgba(74,222,128,0.06);
+  border-color: var(--green);
+}
+
+.info-box.term {
+  background: rgba(167,139,250,0.06);
+  border-color: var(--purple);
+}
+
+.info-box-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.info-box.note .info-box-title { color: var(--accent); }
+.info-box.warn .info-box-title { color: var(--amber); }
+.info-box.tip .info-box-title { color: var(--green); }
+.info-box.term .info-box-title { color: var(--purple); }
+
+.info-box p {
+  font-size: 0.9rem;
+  color: var(--text2);
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* ── Tables ── */
+.table-wrap {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-radius: 10px;
+  border: 1px solid var(--border2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+thead th {
+  background: var(--surface);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+tbody tr:last-child { border-bottom: none; }
+
+tbody tr:hover { background: var(--surface); }
+
+tbody td {
+  padding: 12px 16px;
+  color: var(--text2);
+  vertical-align: top;
+}
+
+tbody td:first-child { color: var(--text); font-weight: 500; }
+
+tbody td code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* ── Visual diagrams ── */
+.diagram {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 32px;
+  margin: 2rem 0;
+  font-family: var(--mono);
+  overflow-x: auto;
+}
+
+.diagram-title {
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+/* SIMD vs SCALAR visual */
+.scalar-vs-simd {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 600px) {
+  .scalar-vs-simd { grid-template-columns: 1fr; }
+}
+
+.vs-col-title {
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.scalar-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.scalar-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.reg-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 30px;
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 5px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reg-box.active {
+  background: rgba(91,143,255,0.15);
+  border-color: rgba(91,143,255,0.4);
+  color: var(--accent);
+}
+
+.simd-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.simd-lane {
+  width: 52px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lane-a { background: rgba(91,143,255,0.12); border: 1px solid rgba(91,143,255,0.3); color: var(--accent); }
+.lane-b { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: var(--purple); }
+.lane-r { background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.3); color: var(--green); }
+.lane-op { background: transparent; border: none; color: var(--text3); font-size: 14px; width: 20px; }
+
+.arrow-down {
+  text-align: center;
+  color: var(--text3);
+  font-size: 18px;
+  line-height: 1;
+  margin: 4px 0;
+}
+
+/* ── Register width diagram ── */
+.reg-evolution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reg-label {
+  font-size: 11px;
+  color: var(--text3);
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.reg-visual {
+  display: flex;
+  height: 32px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.reg-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 500;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.reg-slot:last-child { border-right: none; }
+
+/* ── ISA extension cards ── */
+.isa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 1.5rem 0;
+}
+
+.isa-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: default;
+}
+
+.isa-card:hover {
+  border-color: var(--border2);
+  background: var(--surface);
+}
+
+.isa-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.isa-meta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 8px;
+  font-family: var(--mono);
+}
+
+.isa-desc {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* ── Instruction anatomy ── */
+.instr-anatomy {
+  display: flex;
+  gap: 0;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border2);
+}
+
+.instr-part {
+  flex: 1;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.instr-part:not(:last-child) {
+  border-right: 1px solid var(--border2);
+}
+
+.instr-part-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.instr-part-role {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.4;
+}
+
+.part-prefix { background: rgba(91,143,255,0.08); }
+.part-prefix .instr-part-name { color: var(--accent); }
+
+.part-opcode { background: rgba(167,139,250,0.08); }
+.part-opcode .instr-part-name { color: var(--purple); }
+
+.part-src { background: rgba(74,222,128,0.08); }
+.part-src .instr-part-name { color: var(--green); }
+
+.part-dst { background: rgba(251,191,36,0.08); }
+.part-dst .instr-part-name { color: var(--amber); }
+
+.part-imm { background: rgba(45,212,191,0.08); }
+.part-imm .instr-part-name { color: var(--teal); }
+
+/* ── Throughput tables ── */
+.perf-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perf-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.6s ease;
+}
+
+/* ── Memory alignment diagram ── */
+.align-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.mem-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mem-label {
+  width: 90px;
+  color: var(--text3);
+  font-size: 11px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.mem-bytes {
+  display: flex;
+  gap: 1px;
+}
+
+.mem-byte {
+  width: 22px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* ── Sections dividers ── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--border2) 20%, var(--border2) 80%, transparent 100%);
+  margin: 0;
+}
+
+/* ── Interactive demo ── */
+.demo-container {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.demo-header {
+  background: var(--surface);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+}
+
+.demo-body {
+  padding: 24px;
+}
+
+.vector-display {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vector-element {
+  width: 56px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid;
+  transition: all 0.3s;
+  font-family: var(--mono);
+}
+
+.vector-element .el-index {
+  font-size: 9px;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+
+.vector-element .el-val {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.el-float { background: rgba(91,143,255,0.1); border-color: rgba(91,143,255,0.3); color: var(--accent); }
+.el-result { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3); color: var(--green); }
+.el-op { background: transparent; border-color: transparent; color: var(--text3); font-size: 18px; font-weight: 300; }
+
+.demo-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.demo-btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.demo-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent); }
+.demo-btn.active { background: rgba(91,143,255,0.15); border-color: var(--accent); color: var(--accent); }
+
+.op-label {
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  margin: 12px 0;
+  display: inline-block;
+}
+
+/* ── Masking visual ── */
+.mask-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin: 6px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.mask-label {
+  width: 80px;
+  color: var(--text3);
+  text-align: right;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.mask-bit {
+  width: 28px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.bit-1 { background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.3); color: var(--green); }
+.bit-0 { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text3); }
+
+/* ── Gather/Scatter diagram ── */
+.gather-visual {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin: 1rem 0;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.mem-array {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mem-cell {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mem-addr {
+  width: 32px;
+  color: var(--text3);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.mem-val {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.mem-val.highlighted {
+  background: rgba(91,143,255,0.12);
+  border-color: rgba(91,143,255,0.4);
+  color: var(--accent);
+}
+
+.gather-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text3);
+  font-size: 18px;
+}
+
+/* ── Benchmark chart ── */
+.benchmark-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 1.5rem 0;
+}
+
+.bench-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bench-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  width: 180px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+
+.bench-track {
+  flex: 1;
+  height: 20px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bench-fill {
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  transition: width 1s ease;
+}
+
+.bench-fill-blue { background: linear-gradient(90deg, rgba(91,143,255,0.6), rgba(91,143,255,0.4)); }
+.bench-fill-purple { background: linear-gradient(90deg, rgba(167,139,250,0.6), rgba(167,139,250,0.4)); }
+.bench-fill-green { background: linear-gradient(90deg, rgba(74,222,128,0.6), rgba(74,222,128,0.4)); }
+.bench-fill-amber { background: linear-gradient(90deg, rgba(251,191,36,0.6), rgba(251,191,36,0.4)); }
+.bench-fill-teal { background: linear-gradient(90deg, rgba(45,212,191,0.6), rgba(45,212,191,0.4)); }
+
+.bench-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── TOC ── */
+.toc {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 2rem 0;
+}
+
+.toc-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.toc-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+@media (max-width: 600px) {
+  .toc-list { grid-template-columns: 1fr; }
+}
+
+.toc-list li a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text2);
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.toc-list li a:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.toc-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  width: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  text-align: center;
+  color: var(--text3);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .instr-anatomy { flex-direction: column; }
+  .instr-part:not(:last-child) { border-right: none; border-bottom: 1px solid var(--border2); }
+  pre { font-size: 11px; }
+}
+
+/* ── Scroll fade-in ── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: none;
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="nav">
+  <div class="nav-logo">// SIMD</div>
+  <div class="nav-links">
+    <a href="#fundamentals">Fundamentals</a>
+    <a href="#hardware">Hardware</a>
+    <a href="#isa">ISA Extensions</a>
+    <a href="#intrinsics">Intrinsics</a>
+    <a href="#memory">Memory</a>
+    <a href="#masking">Masking</a>
+    <a href="#shuffle">Shuffle/Permute</a>
+    <a href="#algorithms">Algorithms</a>
+    <a href="#compilers">Compiler Auto-vec</a>
+    <a href="#pitfalls">Pitfalls</a>
+    <a href="#arm">ARM NEON/SVE</a>
+    <a href="#performance">Performance</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section id="home">
+<div class="hero-inner">
+  <div class="hero-tag">COMPLETE REFERENCE · HARDWARE TO SOFTWARE</div>
+  <h1 class="hero-title">Single Instruction,<br><span class="highlight">Multiple Data</span></h1>
+  <p class="hero-subtitle">
+    A comprehensive, from-scratch guide to SIMD — the hardware and software technique that makes modern processors process 16, 32, or 64 values in the same time it takes to process one. Covers x86 SSE/AVX/AVX-512, ARM NEON/SVE, intrinsics, memory alignment, masking, shuffle operations, vectorization, and real-world performance.
+  </p>
+  <div class="hero-chips">
+    <span class="chip chip-blue">x86 SSE/AVX/AVX-512</span>
+    <span class="chip chip-purple">ARM NEON / SVE</span>
+    <span class="chip chip-green">C Intrinsics</span>
+    <span class="chip chip-amber">Compiler Auto-vec</span>
+    <span class="chip chip-teal">Memory Alignment</span>
+    <span class="chip chip-red">Performance Analysis</span>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ul class="toc-list">
+      <li><a href="#fundamentals"><span class="toc-num">01</span>Fundamentals & Mental Model</a></li>
+      <li><a href="#hardware"><span class="toc-num">02</span>Hardware Implementation</a></li>
+      <li><a href="#isa"><span class="toc-num">03</span>ISA Extensions History</a></li>
+      <li><a href="#intrinsics"><span class="toc-num">04</span>Intel Intrinsics Deep Dive</a></li>
+      <li><a href="#memory"><span class="toc-num">05</span>Memory, Alignment & Loads</a></li>
+      <li><a href="#masking"><span class="toc-num">06</span>Masking & Predicates</a></li>
+      <li><a href="#shuffle"><span class="toc-num">07</span>Shuffle, Permute & Blend</a></li>
+      <li><a href="#algorithms"><span class="toc-num">08</span>Vectorized Algorithms</a></li>
+      <li><a href="#compilers"><span class="toc-num">09</span>Compiler Auto-Vectorization</a></li>
+      <li><a href="#pitfalls"><span class="toc-num">10</span>Pitfalls & Anti-Patterns</a></li>
+      <li><a href="#arm"><span class="toc-num">11</span>ARM NEON & SVE</a></li>
+      <li><a href="#performance"><span class="toc-num">12</span>Performance & Profiling</a></li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ FUNDAMENTALS ═══════════════════════ -->
+<section id="fundamentals">
+<div class="section-inner">
+  <div class="section-label">Chapter 01</div>
+  <h2 class="section-title">Fundamentals & Mental Model</h2>
+  <p class="section-intro">Before writing a single intrinsic call, you need to deeply understand <em>what problem SIMD solves</em>, why it exists, and what the hardware is actually doing when you use it.</p>
+
+  <div class="prose fade-in">
+    <h3>Flynn's Taxonomy — where SIMD lives</h3>
+    <p>In 1966, Michael Flynn classified computing architectures along two axes: how many instruction streams exist simultaneously, and how many data streams they operate on. This gives four categories:</p>
+  </div>
+
+  <div class="table-wrap fade-in">
+    <table>
+      <thead><tr><th>Category</th><th>Instructions</th><th>Data Streams</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>SISD</td><td>1</td><td>1</td><td>Classic scalar CPU — one add per instruction</td></tr>
+        <tr><td><strong style="color:var(--accent)">SIMD</strong></td><td>1</td><td>Many</td><td>SSE/AVX — one instruction adds 8 floats at once</td></tr>
+        <tr><td>MISD</td><td>Many</td><td>1</td><td>Theoretical (pipeline stages, some fault-tolerant systems)</td></tr>
+        <tr><td>MIMD</td><td>Many</td><td>Many</td><td>Multi-core CPU, GPU compute shaders</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose fade-in">
+    <p><strong>SIMD sits in the sweet spot</strong> of hardware cost vs. throughput gain. Unlike MIMD (which requires full duplicated execution units, caches, instruction decoders, and branch predictors), SIMD reuses a single instruction decoder, a single program counter, and a single fetch/decode pipeline — only the execution units and register file are widened. You pay roughly linear hardware cost for linear throughput gain.</p>
+
+    <h3>The scalar bottleneck — why SIMD was invented</h3>
+    <p>By the early 1990s, CPU clock speeds were rising, but multimedia workloads — audio DSP, video codecs, image processing — were hitting a wall. These workloads have a distinct pattern: the same arithmetic operation is applied to thousands of independent values stored contiguously in memory. For example, adjusting the brightness of an image means adding a constant to every single pixel value. On scalar hardware:</p>
+  </div>
+
+  <div class="diagram fade-in">
+    <div class="diagram-title">Scalar vs SIMD — processing 8 floats</div>
+    <div class="scalar-vs-simd">
+      <div>
+        <div class="vs-col-title">SISD — 8 separate ADD instructions</div>
+        <div class="scalar-ops">
+          <div class="scalar-step"><span class="reg-box">r0</span><span>← load a[0]</span></div>
+          <div class="scalar-step"><span class="reg-box active">r0</span><span>= r0 + b[0]</span></div>
+          <div class="scalar-step"><span class="reg-box">r1</span><span>← load a[1]</span></div>
+          <div class="scalar-step"><span class="reg-box active">r1</span><span>= r1 + b[1]</span></div>
+          <div style="color:var(--text3);font-size:11px;margin:4px 0">… repeat 6 more times …</div>
+          <div style="margin-top:8px;padding:8px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:6px;font-size:11px;color:var(--red);text-align:center">
+            8 LOAD + 8 ADD + 8 STORE<br>= 24 instructions
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="vs-col-title">SIMD — 1 VADDPS instruction</div>
+        <div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-align:center">Register ymm0 (256-bit)</div>
+            <div class="simd-row">
+              <div class="simd-lane lane-a">a[0]</div>
+              <div class="simd-lane lane-a">a[1]</div>
+              <div class="simd-lane lane-a">a[2]</div>
+              <div class="simd-lane lane-a">a[3]</div>
+              <div class="simd-lane lane-a">a[4]</div>
+              <div class="simd-lane lane-a">a[5]</div>
+              <div class="simd-lane lane-a">a[6]</div>
+              <div class="simd-lane lane-a">a[7]</div>
+            </div>
+          </div>
+          <div class="arrow-down">+</div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-align:center">Register ymm1 (256-bit)</div>
+            <div class="simd-row">
+              <div class="simd-lane lane-b">b[0]</div>
+              <div class="simd-lane lane-b">b[1]</div>
+              <div class="simd-lane lane-b">b[2]</div>
+              <div class="simd-lane lane-b">b[3]</div>
+              <div class="simd-lane lane-b">b[4]</div>
+              <div class="simd-lane lane-b">b[5]</div>
+              <div class="simd-lane lane-b">b[6]</div>
+              <div class="simd-lane lane-b">b[7]</div>
+            </div>
+          </div>
+          <div class="arrow-down">↓</div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-align:center">ymm2 = vaddps ymm0, ymm1</div>
+            <div class="simd-row">
+              <div class="simd-lane lane-r">r[0]</div>
+              <div class="simd-lane lane-r">r[1]</div>
+              <div class="simd-lane lane-r">r[2]</div>
+              <div class="simd-lane lane-r">r[3]</div>
+              <div class="simd-lane lane-r">r[4]</div>
+              <div class="simd-lane lane-r">r[5]</div>
+              <div class="simd-lane lane-r">r[6]</div>
+              <div class="simd-lane lane-r">r[7]</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:8px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:6px;font-size:11px;color:var(--green);text-align:center">
+            1 VMOVUPS + 1 VADDPS + 1 VMOVUPS<br>= 3 instructions · 8× throughput
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>Key terminology you'll see everywhere</h3>
+  </div>
+
+  <div class="info-box term fade-in">
+    <div class="info-box-title">Terminology Glossary</div>
+    <p>
+      <strong>Vector register</strong> — a wide CPU register (64–512 bits) that holds multiple data elements simultaneously.<br>
+      <strong>Lane / element</strong> — one logical slot within a vector register. A 256-bit register holding 32-bit floats has 8 lanes.<br>
+      <strong>Width</strong> — the total bit-size of a vector register (128, 256, 512 bits).<br>
+      <strong>Element type</strong> — the data type packed into each lane: <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code>, <code>float32</code> (single precision), <code>float64</code> (double).<br>
+      <strong>Vectorization</strong> — the process (manual or automatic) of transforming scalar loops into SIMD operations.<br>
+      <strong>ISA extension</strong> — an optional addition to a CPU's instruction set. SSE, AVX, and AVX-512 are ISA extensions.<br>
+      <strong>Intrinsic</strong> — a C/C++ function that maps one-to-one to a single assembly instruction. Used to write SIMD code in C without inline assembly.<br>
+      <strong>Throughput vs latency</strong> — latency is how many cycles an instruction takes to complete; throughput is how many can be in flight simultaneously (reciprocal throughput = minimum cycles between two of the same instruction).<br>
+      <strong>CPUID</strong> — a CPU instruction that reports which ISA extensions the current processor supports at runtime.
+    </p>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>The four operations every SIMD system must provide</h3>
+    <p>Regardless of architecture — x86, ARM, RISC-V V extension, PowerPC AltiVec — every SIMD ISA must provide:</p>
+    <p><strong>1. Arithmetic</strong> — element-wise add, subtract, multiply, divide, fused multiply-add (FMA), min, max, abs, negate. These are the workhorses.</p>
+    <p><strong>2. Memory</strong> — loading a chunk of memory into a vector register (<em>load</em>), storing a register back to memory (<em>store</em>). Plus variants for unaligned access, non-temporal (streaming) stores that bypass the cache, and gather/scatter for non-contiguous access.</p>
+    <p><strong>3. Shuffle/permute</strong> — rearranging elements within or between registers. This is the most powerful and most complex part of SIMD. Many algorithms that seem non-vectorizable become tractable once you understand shuffles.</p>
+    <p><strong>4. Comparison and masking</strong> — comparing elements and producing a mask (a bitmask or predicate register) that controls which lanes participate in subsequent operations. Essential for handling boundary conditions, conditional code, and variable-length data.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ HARDWARE ═══════════════════════ -->
+<section id="hardware">
+<div class="section-inner">
+  <div class="section-label">Chapter 02</div>
+  <h2 class="section-title">Hardware Implementation</h2>
+  <p class="section-intro">Understanding the physical silicon helps you reason about why certain operations are fast, why others have latency penalties, and what the CPU is doing under the hood.</p>
+
+  <div class="prose fade-in">
+    <h3>The vector execution unit</h3>
+    <p>A modern out-of-order CPU like Intel's Golden Cove or AMD's Zen 4 contains multiple independent execution ports. Each port has attached execution units. Scalar integer operations typically have 4–6 ports feeding several ALUs. Vector operations have dedicated ports — typically 2–3 on modern designs — each feeding a full-width vector ALU.</p>
+
+    <p>The key insight: <strong>the hardware cost of a wide vector add is nearly identical to a narrow one.</strong> The transistor overhead of widening an adder from 128 to 256 bits is roughly proportional to the bit width, but the instruction fetch/decode overhead, the register renaming overhead, the scheduler overhead — all the expensive fixed costs — remain constant. This is why SIMD is so efficient: you amortize those fixed costs over more work.</p>
+
+    <h3>Register files — what physically exists on die</h3>
+    <p>When you use SSE, you use registers named <code>xmm0</code>–<code>xmm15</code> (16 registers on x86-64, each 128 bits). When you use AVX/AVX2, you use <code>ymm0</code>–<code>ymm15</code> (256 bits each). <code>xmm</code> registers are the lower 128 bits of the corresponding <code>ymm</code> register — they are the <em>same physical register</em>, just addressed at different widths.</p>
+
+    <p>AVX-512 extends this to <code>zmm0</code>–<code>zmm31</code> (512 bits each, 32 registers total), doubling both the register count and the width. This additional register capacity reduces register pressure significantly — one of the biggest benefits of AVX-512 besides raw width.</p>
+  </div>
+
+  <div class="diagram fade-in">
+    <div class="diagram-title">x86 Vector Register Evolution — width and naming</div>
+    <div class="reg-evolution">
+      <div class="reg-row">
+        <div class="reg-label">MMX 64b</div>
+        <div class="reg-visual" style="width:64px">
+          <div class="reg-slot" style="width:64px;background:rgba(251,191,36,0.12);color:var(--amber);font-size:9px">mm0</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:12px">8×int8 or 4×int16 or 2×int32 — 1997</div>
+      </div>
+      <div class="reg-row">
+        <div class="reg-label">SSE 128b</div>
+        <div class="reg-visual" style="width:128px">
+          <div class="reg-slot" style="width:128px;background:rgba(91,143,255,0.1);color:var(--accent);font-size:9px">xmm0</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:12px">4×f32 or 2×f64 or 16×int8 — 1999</div>
+      </div>
+      <div class="reg-row">
+        <div class="reg-label">AVX 256b</div>
+        <div class="reg-visual" style="width:256px">
+          <div class="reg-slot" style="width:128px;background:rgba(91,143,255,0.1);color:var(--accent);font-size:9px">xmm0 (low)</div>
+          <div class="reg-slot" style="width:128px;background:rgba(91,143,255,0.07);color:rgba(91,143,255,0.6);font-size:9px">ymm0 high</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:12px">8×f32 or 4×f64 — 2011</div>
+      </div>
+      <div class="reg-row">
+        <div class="reg-label">AVX-512 512b</div>
+        <div class="reg-visual" style="width:100%;max-width:512px">
+          <div class="reg-slot" style="width:25%;background:rgba(91,143,255,0.1);color:var(--accent);font-size:9px">xmm0</div>
+          <div class="reg-slot" style="width:25%;background:rgba(91,143,255,0.07);color:rgba(91,143,255,0.7);font-size:9px">ymm0 hi</div>
+          <div class="reg-slot" style="width:50%;background:rgba(91,143,255,0.04);color:rgba(91,143,255,0.5);font-size:9px">zmm0 high 256 bits</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:12px">16×f32 or 8×f64 · 32 regs — 2017</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>The VEX/EVEX encoding prefix — why it matters</h3>
+    <p>Legacy SSE instructions use the original x86 encoding: no prefix, or a <code>66</code>/<code>F2</code>/<code>F3</code> byte prefix. These instructions write only 128 bits and <strong>preserve the upper 128 bits of the ymm register</strong>. This sounds harmless but causes a major performance hazard: the CPU must preserve the upper bits, which means a dependency on the previous writer of that register. This is called the <em>SSE/AVX transition penalty</em>.</p>
+
+    <p>The VEX prefix (introduced with AVX in 2011) solves this. VEX-encoded instructions always <strong>zero-extend to the full register width</strong> — writing to <code>xmm0</code> via a VEX instruction zeroes the upper 128 bits of <code>ymm0</code>/<code>zmm0</code>. No false dependency. This is why you should always use the VEX-encoded <code>v</code> variants: <code>vaddps</code> instead of <code>addps</code>, <code>vmovups</code> instead of <code>movups</code>.</p>
+
+    <p>AVX-512 goes further with EVEX: a 4-byte encoding that adds mask registers, broadcasting, and additional opcodes — all discussed in later chapters.</p>
+
+    <h3>Frequency scaling — the SIMD penalty that most guides miss</h3>
+    <p>On Intel processors (Sandy Bridge through Ice Lake, and some others), enabling 512-bit operations causes the CPU to enter a lower-frequency state called <em>AVX-512 license level</em>. This is because 512-bit units generate more heat. The frequency reduction can be severe — sometimes 300–700 MHz on Skylake-SP. On many workloads, this makes AVX-512 <em>slower</em> than AVX2 unless the computation is highly arithmetic-intensive.</p>
+
+    <p>Alder Lake (12th gen Intel) removed this penalty for most operations. AMD Zen 4 implements 512-bit operations natively without frequency penalties. Always <strong>benchmark on the target hardware</strong>; never assume wider = faster.</p>
+  </div>
+
+  <div class="info-box warn fade-in">
+    <div class="info-box-title">Hardware Reality Check</div>
+    <p>The theoretical peak throughput of SIMD (e.g., "8× faster for 256-bit float32") is almost never achieved in practice. Real speedup depends on: memory bandwidth saturation, instruction throughput vs latency, pipeline dependencies, and branch mispredictions around loop edges. Realistic speedups of 3–6× for well-vectorized code are common; anything above 6× is exceptional.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ ISA EXTENSIONS ═══════════════════════ -->
+<section id="isa">
+<div class="section-inner">
+  <div class="section-label">Chapter 03</div>
+  <h2 class="section-title">ISA Extensions History</h2>
+  <p class="section-intro">x86 SIMD has evolved through a series of backward-compatible extensions. Each one built on the previous, adding width, new data types, or new operations.</p>
+
+  <div class="isa-grid fade-in">
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--amber)">MMX</div>
+      <div class="isa-meta">Intel · 1997 · 64-bit</div>
+      <div class="isa-desc">First x86 SIMD. Reused the FPU register file (mm0–mm7). Integers only: 8×int8, 4×int16, 2×int32. No floats. Fatal flaw: sharing FPU registers required explicit <code>EMMS</code> to switch back to FP. Now obsolete.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--accent)">SSE</div>
+      <div class="isa-meta">Intel Pentium III · 1999 · 128-bit</div>
+      <div class="isa-desc">Introduced 8 dedicated 128-bit xmm registers. Float32 only (4×f32). Added <code>MOVAPS</code>, <code>ADDPS</code>, <code>MULPS</code>, etc. Also introduced PREFETCH instructions for cache hints. The foundation everything else is built on.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--accent)">SSE2</div>
+      <div class="isa-meta">Intel Pentium 4 · 2001 · 128-bit</div>
+      <div class="isa-desc">Critical extension. Added float64 (2×f64), all integer widths (16×int8, 8×int16, 4×int32, 2×int64). This is the baseline for all x86-64 code — every x86-64 CPU supports SSE2. Replaced MMX.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--accent)">SSE3</div>
+      <div class="isa-meta">Intel Prescott · 2004 · 128-bit</div>
+      <div class="isa-desc">Added horizontal operations (<code>HADD</code>, <code>HSUB</code>) and <code>LDDQU</code> for unaligned loads. Also <code>MOVSHDUP</code>/<code>MOVSLDUP</code> for complex number arithmetic.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--accent)">SSSE3</div>
+      <div class="isa-meta">Intel Core 2 · 2007 · 128-bit</div>
+      <div class="isa-desc">Supplemental SSE3. The critical addition: <code>PSHUFB</code> — a byte-granularity shuffle controlled by a vector index. Unlocks enormous algorithmic flexibility. Also added <code>PMULHRSW</code>, <code>PHADDW</code>, and sign operations.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--accent)">SSE4.1 / 4.2</div>
+      <div class="isa-meta">Intel Penryn · 2007 · 128-bit</div>
+      <div class="isa-desc">Added <code>DPPS</code> (dot product), <code>BLENDPS</code> (blend/select), <code>PTEST</code>, <code>PMAXSD</code>, <code>PMULLD</code> (32×32→32 multiply). SSE4.2 added string compare (<code>PCMPISTRI</code>) and CRC32.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--green)">AVX</div>
+      <div class="isa-meta">Intel Sandy Bridge · 2011 · 256-bit</div>
+      <div class="isa-desc">Doubled width to 256 bits (ymm0–ymm15). Introduced VEX encoding (zero-extension, 3-operand non-destructive form). Float32/64 only in AVX; integers still 128-bit until AVX2. Critical milestone.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--green)">AVX2</div>
+      <div class="isa-meta">Intel Haswell · 2013 · 256-bit</div>
+      <div class="isa-desc">Extended 256-bit operations to all integer types. Added gather instructions (<code>VGATHERDPS</code>), broadcast (<code>VPBROADCASTD</code>), variable shifts (<code>VPSLLVD</code>), and permute across full 256-bit registers. The current practical sweet spot.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--purple)">FMA3</div>
+      <div class="isa-meta">Intel Haswell · 2013</div>
+      <div class="isa-desc">Fused multiply-add: <code>a*b+c</code> in a single instruction with only one rounding step. Critical for throughput-bound code. <code>VFMADD213PS</code>, <code>VFMADD231PS</code> etc. — the number encodes the order of operands.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--purple)">AVX-512</div>
+      <div class="isa-meta">Intel Knights Landing · 2017 · 512-bit</div>
+      <div class="isa-desc">512-bit zmm0–zmm31 (32 registers). EVEX encoding adds opmask registers (k0–k7) for per-element masking, embedded broadcast, static rounding control. Many sub-extensions: F, BW, DQ, VL, VNNI, VBMI, etc.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--teal)">AVX-VNNI</div>
+      <div class="isa-meta">Intel Alder Lake · 2021</div>
+      <div class="isa-desc">Vector Neural Network Instructions. <code>VPDPBUSD</code> computes 4-element dot products of int8 values, accumulating into int32. Critical for deep learning inference on CPUs. Available without full AVX-512.</div>
+    </div>
+    <div class="isa-card">
+      <div class="isa-name" style="color:var(--teal)">AVX10</div>
+      <div class="isa-meta">Intel Granite Rapids · 2024+</div>
+      <div class="isa-desc">Unifies AVX-512 across P-cores and E-cores. Defines versioned capability levels (AVX10/1, AVX10/2) to reduce the fragmentation caused by AVX-512 sub-extensions. The future direction for Intel SIMD.</div>
+    </div>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>Runtime CPU feature detection</h3>
+    <p>You <strong>cannot assume</strong> any extension beyond SSE2 is available. Code compiled with <code>-mavx2</code> and run on a Sandy Bridge CPU will crash with an illegal instruction fault. The correct approach is runtime CPUID detection:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — CPUID feature detection</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;stdint.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;stdbool.h&gt;</span>
+
+<span class="kw">static inline void</span> <span class="fn">cpuid</span>(<span class="type">uint32_t</span> leaf, <span class="type">uint32_t</span> subleaf,
+                           <span class="type">uint32_t</span> *eax, <span class="type">uint32_t</span> *ebx,
+                           <span class="type">uint32_t</span> *ecx, <span class="type">uint32_t</span> *edx) {
+    <span class="fn">__asm__</span> <span class="kw">volatile</span>(
+        <span class="str">"cpuid"</span>
+        : <span class="str">"=a"</span>(*eax), <span class="str">"=b"</span>(*ebx), <span class="str">"=c"</span>(*ecx), <span class="str">"=d"</span>(*edx)
+        : <span class="str">"0"</span>(leaf), <span class="str">"2"</span>(subleaf)
+    );
+}
+
+<span class="kw">typedef struct</span> {
+    <span class="type">bool</span> sse2, sse3, ssse3, sse41, sse42;
+    <span class="type">bool</span> avx, avx2, fma;
+    <span class="type">bool</span> avx512f, avx512bw, avx512vl, avx512vnni;
+} <span class="type">CpuFeatures</span>;
+
+<span class="type">CpuFeatures</span> <span class="fn">detect_cpu_features</span>(<span class="kw">void</span>) {
+    <span class="type">CpuFeatures</span> f = {<span class="num">0</span>};
+    <span class="type">uint32_t</span> eax, ebx, ecx, edx;
+
+    <span class="cmt">/* Leaf 1: basic features */</span>
+    <span class="fn">cpuid</span>(<span class="num">1</span>, <span class="num">0</span>, &amp;eax, &amp;ebx, &amp;ecx, &amp;edx);
+    f.sse2  = (edx &gt;&gt; <span class="num">26</span>) &amp; <span class="num">1</span>;   <span class="cmt">/* EDX bit 26 */</span>
+    f.sse3  = (ecx &gt;&gt; <span class="num">0</span>)  &amp; <span class="num">1</span>;   <span class="cmt">/* ECX bit 0  */</span>
+    f.ssse3 = (ecx &gt;&gt; <span class="num">9</span>)  &amp; <span class="num">1</span>;   <span class="cmt">/* ECX bit 9  */</span>
+    f.sse41 = (ecx &gt;&gt; <span class="num">19</span>) &amp; <span class="num">1</span>;
+    f.sse42 = (ecx &gt;&gt; <span class="num">20</span>) &amp; <span class="num">1</span>;
+    f.avx   = (ecx &gt;&gt; <span class="num">28</span>) &amp; <span class="num">1</span>;
+    f.fma   = (ecx &gt;&gt; <span class="num">12</span>) &amp; <span class="num">1</span>;
+
+    <span class="cmt">/* Leaf 7: extended features */</span>
+    <span class="fn">cpuid</span>(<span class="num">7</span>, <span class="num">0</span>, &amp;eax, &amp;ebx, &amp;ecx, &amp;edx);
+    f.avx2      = (ebx &gt;&gt; <span class="num">5</span>)  &amp; <span class="num">1</span>;
+    f.avx512f   = (ebx &gt;&gt; <span class="num">16</span>) &amp; <span class="num">1</span>;
+    f.avx512bw  = (ebx &gt;&gt; <span class="num">30</span>) &amp; <span class="num">1</span>;
+    f.avx512vl  = (ebx &gt;&gt; <span class="num">31</span>) &amp; <span class="num">1</span>;
+    f.avx512vnni= (ecx &gt;&gt; <span class="num">11</span>) &amp; <span class="num">1</span>;
+
+    <span class="kw">return</span> f;
+}</pre>
+  </div>
+
+  <div class="info-box note fade-in">
+    <div class="info-box-title">Practical Baseline</div>
+    <p>For most production code targeting general x86-64 deployments: SSE2 is guaranteed (part of x86-64 ABI). SSSE3 is safe for code targeting hardware from 2008+. AVX2+FMA is safe for code targeting hardware from 2015+. AVX-512 requires explicit deployment targeting (data centers, specific HPC hardware).</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ INTRINSICS ═══════════════════════ -->
+<section id="intrinsics">
+<div class="section-inner">
+  <div class="section-label">Chapter 04</div>
+  <h2 class="section-title">Intel Intrinsics Deep Dive</h2>
+  <p class="section-intro">Intrinsics are the primary API for writing SIMD code in C/C++. They look like function calls but compile to single instructions. Understanding the naming convention is essential.</p>
+
+  <div class="prose fade-in">
+    <h3>The naming convention — decoded</h3>
+    <p>Every Intel SIMD intrinsic follows a systematic naming scheme. Once you internalize it, you can read any intrinsic name and know exactly what it does.</p>
+  </div>
+
+  <div class="instr-anatomy fade-in">
+    <div class="instr-part part-prefix">
+      <div class="instr-part-name">_mm256_</div>
+      <div class="instr-part-role">width prefix:<br>_mm_ = 128b<br>_mm256_ = 256b<br>_mm512_ = 512b</div>
+    </div>
+    <div class="instr-part part-opcode">
+      <div class="instr-part-name">add</div>
+      <div class="instr-part-role">operation:<br>add, sub, mul,<br>div, load, store,<br>shuffle, cmp…</div>
+    </div>
+    <div class="instr-part part-src">
+      <div class="instr-part-name">_ps</div>
+      <div class="instr-part-role">element suffix:<br>_ps = packed f32<br>_pd = packed f64<br>_epi32 = int32<br>_epu16 = uint16</div>
+    </div>
+  </div>
+
+  <div class="prose fade-in">
+    <p>Full example: <code>_mm256_add_ps(a, b)</code> means: 256-bit wide, add operation, packed single-precision floats. It compiles to a single <code>VADDPS ymm, ymm, ymm</code> instruction.</p>
+
+    <h3>Element type suffixes — complete reference</h3>
+  </div>
+
+  <div class="table-wrap fade-in">
+    <table>
+      <thead><tr><th>Suffix</th><th>Meaning</th><th>Lanes in 256b</th><th>Lanes in 128b</th></tr></thead>
+      <tbody>
+        <tr><td><code>_ps</code></td><td>Packed single-precision float (float32)</td><td>8</td><td>4</td></tr>
+        <tr><td><code>_pd</code></td><td>Packed double-precision float (float64)</td><td>4</td><td>2</td></tr>
+        <tr><td><code>_ss</code></td><td>Scalar single — operates on lowest lane only</td><td>—</td><td>1</td></tr>
+        <tr><td><code>_sd</code></td><td>Scalar double — lowest lane only</td><td>—</td><td>1</td></tr>
+        <tr><td><code>_epi8</code></td><td>Packed signed 8-bit integers</td><td>32</td><td>16</td></tr>
+        <tr><td><code>_epi16</code></td><td>Packed signed 16-bit integers</td><td>16</td><td>8</td></tr>
+        <tr><td><code>_epi32</code></td><td>Packed signed 32-bit integers</td><td>8</td><td>4</td></tr>
+        <tr><td><code>_epi64</code></td><td>Packed signed 64-bit integers</td><td>4</td><td>2</td></tr>
+        <tr><td><code>_epu8</code></td><td>Packed unsigned 8-bit integers</td><td>32</td><td>16</td></tr>
+        <tr><td><code>_epu16</code></td><td>Packed unsigned 16-bit integers</td><td>16</td><td>8</td></tr>
+        <tr><td><code>_epu32</code></td><td>Packed unsigned 32-bit integers</td><td>8</td><td>4</td></tr>
+        <tr><td><code>_si128</code></td><td>Generic 128-bit integer (untyped)</td><td>—</td><td>1</td></tr>
+        <tr><td><code>_si256</code></td><td>Generic 256-bit integer (untyped)</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>The type system — __m128, __m256, __m512</h3>
+    <p>Intel intrinsics use opaque vector types. You don't access lanes directly — you use intrinsics to manipulate them. The types:</p>
+    <p><code>__m128</code> — 128-bit vector of float32 (used with <code>_mm_*_ps</code>)<br>
+    <code>__m128d</code> — 128-bit vector of float64 (<code>_mm_*_pd</code>)<br>
+    <code>__m128i</code> — 128-bit vector, any integer type (<code>_mm_*_epiN</code>)<br>
+    <code>__m256</code>, <code>__m256d</code>, <code>__m256i</code> — 256-bit equivalents<br>
+    <code>__m512</code>, <code>__m512d</code>, <code>__m512i</code> — 512-bit equivalents</p>
+
+    <p>These are <strong>not pointers</strong>. They are value types stored in registers. Passing them by value in function arguments is fine — the ABI passes vector types in xmm/ymm/zmm registers directly (System V AMD64 ABI passes up to 8 __m256 by value in ymm registers).</p>
+
+    <h3>Essential operations with code examples</h3>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C++ — AVX2 Arithmetic and Logic</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;immintrin.h&gt;</span>   <span class="cmt">// all Intel SIMD intrinsics</span>
+
+<span class="cmt">/* ── Set / Initialize ── */</span>
+<span class="type">__m256</span> zeros  = <span class="fn">_mm256_setzero_ps</span>();       <span class="cmt">// all 8 lanes = 0.0f</span>
+<span class="type">__m256</span> ones   = <span class="fn">_mm256_set1_ps</span>(<span class="num">1.0f</span>);     <span class="cmt">// broadcast scalar to all lanes</span>
+<span class="type">__m256</span> custom = <span class="fn">_mm256_set_ps</span>             <span class="cmt">// set individual values</span>
+    (<span class="num">7.f</span>, <span class="num">6.f</span>, <span class="num">5.f</span>, <span class="num">4.f</span>, <span class="num">3.f</span>, <span class="num">2.f</span>, <span class="num">1.f</span>, <span class="num">0.f</span>);
+<span class="cmt">// CAUTION: _mm256_set_ps args are in REVERSE lane order (lane 7 first)</span>
+
+<span class="cmt">/* ── Arithmetic ── */</span>
+<span class="type">__m256</span> a, b, c;
+c = <span class="fn">_mm256_add_ps</span>(a, b);               <span class="cmt">// c[i] = a[i] + b[i]</span>
+c = <span class="fn">_mm256_mul_ps</span>(a, b);               <span class="cmt">// c[i] = a[i] * b[i]</span>
+c = <span class="fn">_mm256_div_ps</span>(a, b);               <span class="cmt">// c[i] = a[i] / b[i]  (slow ~11 cycles)</span>
+c = <span class="fn">_mm256_sqrt_ps</span>(a);                 <span class="cmt">// c[i] = sqrt(a[i])   (slow ~13 cycles)</span>
+c = <span class="fn">_mm256_rcp_ps</span>(a);                  <span class="cmt">// c[i] ≈ 1/a[i]  (12-bit approx, fast)</span>
+c = <span class="fn">_mm256_rsqrt_ps</span>(a);               <span class="cmt">// c[i] ≈ 1/sqrt(a[i]) (12-bit approx)</span>
+
+<span class="cmt">/* ── Fused Multiply-Add (FMA) — requires FMA3 ── */</span>
+<span class="cmt">// a*b + c   (213: a=dst, b*c+dst notation: second*third+first)</span>
+c = <span class="fn">_mm256_fmadd_ps</span>(a, b, c);          <span class="cmt">// c[i] = a[i]*b[i] + c[i]</span>
+c = <span class="fn">_mm256_fmsub_ps</span>(a, b, c);          <span class="cmt">// c[i] = a[i]*b[i] - c[i]</span>
+c = <span class="fn">_mm256_fnmadd_ps</span>(a, b, c);         <span class="cmt">// c[i] = -(a[i]*b[i]) + c[i]</span>
+
+<span class="cmt">/* ── Integer arithmetic (256-bit) ── */</span>
+<span class="type">__m256i</span> ia, ib, ic;
+ic = <span class="fn">_mm256_add_epi32</span>(ia, ib);         <span class="cmt">// 8×int32 add (wraps on overflow)</span>
+ic = <span class="fn">_mm256_adds_epi16</span>(ia, ib);        <span class="cmt">// 16×int16 saturating add (clamps)</span>
+ic = <span class="fn">_mm256_mullo_epi32</span>(ia, ib);       <span class="cmt">// low 32 bits of 32×32 multiply</span>
+ic = <span class="fn">_mm256_mulhi_epi16</span>(ia, ib);       <span class="cmt">// high 16 bits of 16×16 multiply</span>
+
+<span class="cmt">/* ── Comparison — returns mask vector ── */</span>
+<span class="type">__m256</span> mask = <span class="fn">_mm256_cmp_ps</span>(a, b, <span class="num">_CMP_LT_OQ</span>); <span class="cmt">// per-element: a[i] < b[i]</span>
+<span class="cmt">// mask[i] = 0xFFFFFFFF if true, 0x00000000 if false</span>
+c = <span class="fn">_mm256_blendv_ps</span>(a, b, mask);      <span class="cmt">// c[i] = mask[i] ? b[i] : a[i]</span>
+
+<span class="cmt">/* ── Bitwise ── */</span>
+c = <span class="fn">_mm256_and_ps</span>(a, b);               <span class="cmt">// bitwise AND (reinterprets as bits)</span>
+c = <span class="fn">_mm256_or_ps</span>(a, b);
+c = <span class="fn">_mm256_xor_ps</span>(a, b);
+c = <span class="fn">_mm256_andnot_ps</span>(a, b);            <span class="cmt">// (~a) & b</span>
+
+<span class="cmt">/* ── Horizontal ops (cross-lane, expensive) ── */</span>
+c = <span class="fn">_mm256_hadd_ps</span>(a, b);  <span class="cmt">// [a0+a1, a2+a3, b0+b1, b2+b3, a4+a5, a6+a7, b4+b5, b6+b7]</span>
+<span class="cmt">// HADD is often slow — prefer a sequence of vertical ops + shuffles</span></pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>The FMA naming confusion — 132, 213, 231</h3>
+    <p>FMA3 has three variants of each operation, differing only in which register is used as the addend/destination. The number encodes the operand order for the <code>a*b+c</code> operation:</p>
+    <p><code>VFMADD132PS dst, src1, src2</code> → dst = dst * src2 + src1<br>
+    <code>VFMADD213PS dst, src1, src2</code> → dst = src1 * dst + src2<br>
+    <code>VFMADD231PS dst, src1, src2</code> → dst = src1 * src2 + dst</p>
+    <p>The number (1, 2, 3) indicates which operand position is used as the multiplicand (1), multiplier (2), and addend (3). In practice, the compiler picks the variant that minimizes register moves. When writing intrinsics by hand, use <code>_mm256_fmadd_ps</code> which takes <code>(a, b, c)</code> and computes <code>a*b+c</code>.</p>
+  </div>
+
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ MEMORY ═══════════════════════ -->
+<section id="memory">
+<div class="section-inner">
+  <div class="section-label">Chapter 05</div>
+  <h2 class="section-title">Memory, Alignment & Load/Store</h2>
+  <p class="section-intro">Memory operations are where most SIMD performance is made or lost. Understanding alignment, streaming stores, and gather/scatter is essential.</p>
+
+  <div class="prose fade-in">
+    <h3>Alignment — why it matters at the hardware level</h3>
+    <p>A memory access is <em>aligned</em> when its address is a multiple of its size. A 256-bit (32-byte) load is aligned when its address is divisible by 32. The reason alignment matters: SIMD loads are implemented in hardware as single cache-line transfers. A cache line on all modern x86 processors is 64 bytes. An aligned 32-byte load always falls within a single cache line. An <em>unaligned</em> 32-byte load may straddle two cache lines, requiring two separate cache-line reads and a hardware merge — roughly a 1–3 cycle penalty.</p>
+
+    <p>On very old hardware (pre-Nehalem), misaligned SIMD loads could fault. On modern CPUs (Sandy Bridge+), misaligned loads are handled in hardware with only a small penalty. Still, <strong>always align your data</strong> when you control allocation.</p>
+  </div>
+
+  <div class="diagram fade-in">
+    <div class="diagram-title">Memory alignment — cache line crossing penalty</div>
+    <div class="align-diagram">
+      <div class="mem-row">
+        <div class="mem-label">cache line 0</div>
+        <div class="mem-bytes" id="align-bytes-0"></div>
+      </div>
+      <div class="mem-row">
+        <div class="mem-label">cache line 1</div>
+        <div class="mem-bytes" id="align-bytes-1"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)"><div style="width:14px;height:14px;background:rgba(74,222,128,0.2);border:1px solid rgba(74,222,128,0.4);border-radius:2px"></div>aligned 256b load (within one cache line)</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)"><div style="width:14px;height:14px;background:rgba(248,113,113,0.2);border:1px solid rgba(248,113,113,0.4);border-radius:2px"></div>unaligned load (crosses cache line boundary)</div>
+    </div>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Aligned allocation and load/store</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;immintrin.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+
+<span class="cmt">/* ── Aligned allocation ── */</span>
+<span class="type">float</span> *data;
+<span class="fn">posix_memalign</span>((<span class="kw">void</span>**)&amp;data, <span class="num">32</span>, n * <span class="kw">sizeof</span>(<span class="type">float</span>)); <span class="cmt">// Linux</span>
+<span class="cmt">// or use C11: aligned_alloc(32, n * sizeof(float))</span>
+<span class="cmt">// or C++17: std::aligned_alloc</span>
+
+<span class="cmt">/* Hint the compiler about alignment: */</span>
+data = <span class="fn">__builtin_assume_aligned</span>(data, <span class="num">32</span>);  <span class="cmt">// GCC/Clang</span>
+<span class="cmt">// or MSVC: __assume(((uintptr_t)data & 31) == 0);</span>
+
+<span class="cmt">/* ── Load variants ── */</span>
+<span class="type">__m256</span> v;
+
+<span class="cmt">// Aligned load — address MUST be 32-byte aligned (undefined behavior if not)</span>
+v = <span class="fn">_mm256_load_ps</span>(data);       <span class="cmt">// VMOVAPS — fastest</span>
+
+<span class="cmt">// Unaligned load — works at any address, tiny penalty on misaligned</span>
+v = <span class="fn">_mm256_loadu_ps</span>(data + <span class="num">1</span>);  <span class="cmt">// VMOVUPS — always safe</span>
+
+<span class="cmt">// Broadcast a single float to all 8 lanes</span>
+v = <span class="fn">_mm256_broadcast_ss</span>(data);  <span class="cmt">// VBROADCASTSS — [d[0],d[0],...,d[0]]</span>
+<span class="type">__m128</span> lane = <span class="fn">_mm_load_ps</span>(data);
+<span class="type">__m256</span> rep  = <span class="fn">_mm256_broadcast_ps</span>(&amp;lane); <span class="cmt">// [xmm,xmm] — 128b broadcast to 256b</span>
+
+<span class="cmt">/* ── Store variants ── */</span>
+<span class="fn">_mm256_store_ps</span>(data, v);       <span class="cmt">// aligned store</span>
+<span class="fn">_mm256_storeu_ps</span>(data + <span class="num">1</span>, v); <span class="cmt">// unaligned store</span>
+
+<span class="cmt">/* Non-temporal streaming store — bypasses cache, for write-once data */</span>
+<span class="fn">_mm256_stream_ps</span>(data, v);      <span class="cmt">// VMOVNTPS — MUST be aligned, weakly ordered</span>
+<span class="fn">_mm_sfence</span>();                   <span class="cmt">// required fence after streaming stores</span>
+<span class="cmt">// Use _mm256_stream_ps when writing large buffers you won't read back soon.
+// Eliminates cache pollution: cache lines are not loaded before being overwritten.</span>
+
+<span class="cmt">/* ── Masked load/store (AVX) — loads only lanes where mask bit is set ── */</span>
+<span class="type">__m256i</span> mask = <span class="fn">_mm256_set_epi32</span>(-<span class="num">1</span>,-<span class="num">1</span>,-<span class="num">1</span>,-<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>); <span class="cmt">// upper 4 active</span>
+v = <span class="fn">_mm256_maskload_ps</span>(data, mask);    <span class="cmt">// lanes with mask sign bit=1 are loaded</span>
+<span class="fn">_mm256_maskstore_ps</span>(data, mask, v);    <span class="cmt">// stores only active lanes</span></pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>Gather and scatter — non-contiguous memory access</h3>
+    <p>Gather (introduced in AVX2) loads elements from arbitrary memory addresses given a vector of indices. This is essential for <em>indirect memory access</em> patterns — lookup tables, sparse arrays, permutations. However, gathers are significantly slower than contiguous loads because each lane may touch a different cache line.</p>
+
+    <p>Scatter (AVX-512) is the reverse: storing elements at arbitrary addresses given a vector of indices.</p>
+  </div>
+
+  <div class="diagram fade-in">
+    <div class="diagram-title">Gather — loading non-contiguous elements</div>
+    <div class="gather-visual">
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">Memory array</div>
+        <div class="mem-array" id="gather-mem"></div>
+      </div>
+      <div class="gather-arrows">
+        <div style="font-size:11px;color:var(--text3);text-align:center">indices</div>
+        <div>[0,3,5,7]</div>
+        <div style="font-size:20px">→</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">Gathered vector</div>
+        <div style="display:flex;flex-direction:column;gap:3px" id="gather-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Gather/Scatter (AVX2 / AVX-512)</div></div>
+    <pre><span class="cmt">/* ── AVX2 Gather ── */</span>
+<span class="type">float</span>   base[]   = { <span class="num">10.f</span>, <span class="num">20.f</span>, <span class="num">30.f</span>, <span class="num">40.f</span>, <span class="num">50.f</span>, <span class="num">60.f</span>, <span class="num">70.f</span>, <span class="num">80.f</span> };
+<span class="type">__m256i</span> indices  = <span class="fn">_mm256_set_epi32</span>(<span class="num">7</span>,<span class="num">5</span>,<span class="num">3</span>,<span class="num">1</span>, <span class="num">6</span>,<span class="num">4</span>,<span class="num">2</span>,<span class="num">0</span>); <span class="cmt">// reversed lane order</span>
+<span class="type">__m256i</span> all_ones = <span class="fn">_mm256_set1_epi32</span>(-<span class="num">1</span>);  <span class="cmt">// mask: all lanes active</span>
+<span class="type">__m256</span>  src      = <span class="fn">_mm256_setzero_ps</span>();      <span class="cmt">// fallback for inactive lanes</span>
+
+<span class="type">__m256</span> gathered = <span class="fn">_mm256_mask_i32gather_ps</span>(
+    src,         <span class="cmt">// passthrough value for masked-off lanes</span>
+    base,        <span class="cmt">// base pointer</span>
+    indices,     <span class="cmt">// vector of int32 indices</span>
+    all_ones,    <span class="cmt">// mask (sign bit = active lane)</span>
+    <span class="num">4</span>            <span class="cmt">// scale: byte offset = index * scale. Values: 1,2,4,8</span>
+);
+<span class="cmt">// gathered = [base[0], base[2], base[4], base[6], base[1], base[3], base[5], base[7]]</span>
+
+<span class="cmt">/* ── AVX-512 Scatter ── */</span>
+<span class="type">__m512i</span> zidx  = <span class="fn">_mm512_set_epi32</span>(<span class="num">15</span>,<span class="num">13</span>,<span class="num">11</span>,<span class="num">9</span>, <span class="num">7</span>,<span class="num">5</span>,<span class="num">3</span>,<span class="num">1</span>,
+                                   <span class="num">14</span>,<span class="num">12</span>,<span class="num">10</span>,<span class="num">8</span>, <span class="num">6</span>,<span class="num">4</span>,<span class="num">2</span>,<span class="num">0</span>);
+<span class="fn">_mm512_i32scatter_ps</span>(output, zidx, data_vec, <span class="num">4</span>); <span class="cmt">// writes to scattered addresses</span>
+<span class="cmt">// Scatter latency is high (~20+ cycles) due to potential address conflicts.</span>
+<span class="cmt">// Always check there are no duplicate scatter indices — result is undefined.</span></pre>
+  </div>
+
+  <div class="info-box warn fade-in">
+    <div class="info-box-title">Gather Performance Warning</div>
+    <p>AVX2 gather is often <em>slower</em> than a scalar loop for small arrays that fit in L1 cache, because the gather instruction has high latency (≈20 cycles) and limited throughput. Only use gather when (1) the array doesn't fit in L1/L2, (2) the access pattern is highly irregular, AND (3) you can execute several independent gathers in parallel to hide latency. Benchmark before committing to gather.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ MASKING ═══════════════════════ -->
+<section id="masking">
+<div class="section-inner">
+  <div class="section-label">Chapter 06</div>
+  <h2 class="section-title">Masking & Predicates</h2>
+  <p class="section-intro">Masking is how SIMD handles conditional logic. Instead of branching, you compute results for all lanes and use a mask to select which results are kept.</p>
+
+  <div class="prose fade-in">
+    <h3>Blend masking (SSE4.1 / AVX)</h3>
+    <p>Before AVX-512, masking was done with <em>blend</em> operations. You compute the comparison result as a vector of 0s and 0xFFFFFF…s, then use <code>blendv</code> to select between two vectors element-wise. This is equivalent to a vectorized ternary operator.</p>
+  </div>
+
+  <div class="diagram fade-in">
+    <div class="diagram-title">AVX blend masking — vectorized conditional</div>
+    <div style="font-family:var(--mono);font-size:12px">
+      <div class="mask-row">
+        <div class="mask-label">a (original)</div>
+        <div style="display:flex;gap:3px">
+          <div class="mask-bit bit-1">1.0</div>
+          <div class="mask-bit bit-1">2.0</div>
+          <div class="mask-bit bit-1">3.0</div>
+          <div class="mask-bit bit-1">4.0</div>
+          <div class="mask-bit bit-1">5.0</div>
+          <div class="mask-bit bit-1">6.0</div>
+          <div class="mask-bit bit-1">7.0</div>
+          <div class="mask-bit bit-1">8.0</div>
+        </div>
+      </div>
+      <div class="mask-row">
+        <div class="mask-label">b (new)</div>
+        <div style="display:flex;gap:3px">
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">10</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">20</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">30</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">40</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">50</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">60</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">70</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">80</div>
+        </div>
+      </div>
+      <div class="mask-row">
+        <div class="mask-label">mask (a>4.0)</div>
+        <div style="display:flex;gap:3px">
+          <div class="mask-bit bit-0">0</div>
+          <div class="mask-bit bit-0">0</div>
+          <div class="mask-bit bit-0">0</div>
+          <div class="mask-bit bit-0">0</div>
+          <div class="mask-bit bit-1">1</div>
+          <div class="mask-bit bit-1">1</div>
+          <div class="mask-bit bit-1">1</div>
+          <div class="mask-bit bit-1">1</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--text3);font-size:11px;margin:6px 0">blendv: select b[i] if mask[i]=1, else a[i]</div>
+      <div class="mask-row">
+        <div class="mask-label">result</div>
+        <div style="display:flex;gap:3px">
+          <div class="mask-bit bit-1">1.0</div>
+          <div class="mask-bit bit-1">2.0</div>
+          <div class="mask-bit bit-1">3.0</div>
+          <div class="mask-bit bit-1">4.0</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:var(--purple)">50</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:var(--purple)">60</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:var(--purple)">70</div>
+          <div class="mask-bit" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:var(--purple)">80</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Masking patterns: blend, clamp, abs</div></div>
+    <pre><span class="cmt">/* ── Pattern: vectorized clamp (min/max) ── */</span>
+<span class="kw">static inline</span> <span class="type">__m256</span> <span class="fn">clamp_ps</span>(<span class="type">__m256</span> x, <span class="type">__m256</span> lo, <span class="type">__m256</span> hi) {
+    x = <span class="fn">_mm256_max_ps</span>(x, lo);    <span class="cmt">// x = max(x, lo)</span>
+    x = <span class="fn">_mm256_min_ps</span>(x, hi);    <span class="cmt">// x = min(x, hi)</span>
+    <span class="kw">return</span> x;
+}
+
+<span class="cmt">/* ── Pattern: vectorized abs for float ── */</span>
+<span class="kw">static inline</span> <span class="type">__m256</span> <span class="fn">abs_ps</span>(<span class="type">__m256</span> x) {
+    <span class="cmt">// Float sign is the MSB. Clear it by ANDing with 0x7FFFFFFF.</span>
+    <span class="type">__m256</span> mask = <span class="fn">_mm256_castsi256_ps</span>(<span class="fn">_mm256_set1_epi32</span>(<span class="num">0x7FFFFFFF</span>));
+    <span class="kw">return</span> <span class="fn">_mm256_and_ps</span>(x, mask);  <span class="cmt">// strip sign bit</span>
+}
+
+<span class="cmt">/* ── Pattern: vectorized negate ── */</span>
+<span class="kw">static inline</span> <span class="type">__m256</span> <span class="fn">neg_ps</span>(<span class="type">__m256</span> x) {
+    <span class="type">__m256</span> sign_mask = <span class="fn">_mm256_castsi256_ps</span>(<span class="fn">_mm256_set1_epi32</span>(<span class="num">0x80000000</span>));
+    <span class="kw">return</span> <span class="fn">_mm256_xor_ps</span>(x, sign_mask);  <span class="cmt">// flip sign bit</span>
+}
+
+<span class="cmt">/* ── Pattern: conditional with two outcomes ── */</span>
+<span class="cmt">// Scalar: result[i] = (x[i] > 0) ? a[i] : b[i]</span>
+<span class="type">__m256</span> <span class="fn">conditional_select</span>(<span class="type">__m256</span> x, <span class="type">__m256</span> a, <span class="type">__m256</span> b) {
+    <span class="type">__m256</span> mask = <span class="fn">_mm256_cmp_ps</span>(x, <span class="fn">_mm256_setzero_ps</span>(), <span class="num">_CMP_GT_OQ</span>);
+    <span class="kw">return</span> <span class="fn">_mm256_blendv_ps</span>(b, a, mask); <span class="cmt">// a where mask=1, b where mask=0</span>
+}</pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>AVX-512 opmask registers — a paradigm shift</h3>
+    <p>AVX-512 introduced <em>opmask registers</em>: <code>k0</code>–<code>k7</code>. These are compact 8-bit to 64-bit integer registers where each bit corresponds to one lane of the vector operation. Instead of wasting a full vector register for masking, you now use a tiny dedicated mask register.</p>
+    <p>The payoff: almost every AVX-512 instruction has a built-in <code>{k1}</code> masking suffix. You don't need separate blend instructions — masking is embedded directly in the arithmetic instruction. You can also use <em>zero-masking</em> (<code>{k1}{z}</code>) where inactive lanes are zeroed, or <em>merge-masking</em> where they retain their previous value.</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — AVX-512 opmask operations</div></div>
+    <pre><span class="cmt">/* ── AVX-512 opmask examples ── */</span>
+<span class="type">__m512</span>  a, b, c;
+<span class="type">__mmask16</span> k;    <span class="cmt">// 16-bit mask for 16×f32 (512-bit register)</span>
+
+<span class="cmt">/* Compare to produce a mask (not a vector of floats!) */</span>
+k = <span class="fn">_mm512_cmp_ps_mask</span>(a, b, <span class="num">_CMP_LT_OQ</span>);
+<span class="cmt">// k is now a 16-bit integer where bit i=1 if a[i] < b[i]</span>
+
+<span class="cmt">/* Masked add: only adds where mask bit = 1, merges src otherwise */</span>
+c = <span class="fn">_mm512_mask_add_ps</span>(
+    c,   <span class="cmt">// src: pass-through for inactive lanes (merge masking)</span>
+    k,   <span class="cmt">// mask</span>
+    a, b <span class="cmt">// operands</span>
+);
+
+<span class="cmt">/* Zero-masked add: inactive lanes are set to 0 */</span>
+c = <span class="fn">_mm512_maskz_add_ps</span>(k, a, b);
+
+<span class="cmt">/* Mask arithmetic (scalar bitwise ops on mask registers) */</span>
+<span class="type">__mmask16</span> k2 = <span class="fn">_mm512_cmp_ps_mask</span>(a, <span class="fn">_mm512_setzero_ps</span>(), <span class="num">_CMP_GT_OQ</span>);
+<span class="type">__mmask16</span> both = k &amp; k2;    <span class="cmt">// lanes where a<b AND a>0</span>
+<span class="type">__mmask16</span> either = k | k2;  <span class="cmt">// lanes where a<b OR a>0</span>
+<span class="type">int</span> n_active = <span class="fn">_mm_popcnt_u32</span>(k);  <span class="cmt">// count active lanes</span>
+
+<span class="cmt">/* Convert mask to integer (scalar) and back */</span>
+<span class="type">uint32_t</span> scalar_mask = (<span class="type">uint32_t</span>)k;
+<span class="type">__mmask16</span> from_scalar = (<span class="type">__mmask16</span>)scalar_mask;
+
+<span class="cmt">/* Masked store: only write active lanes to memory (safe for loop tails!) */</span>
+<span class="fn">_mm512_mask_storeu_ps</span>(ptr, k, data);  <span class="cmt">// writes only where k bit = 1</span></pre>
+  </div>
+
+  <div class="info-box tip fade-in">
+    <div class="info-box-title">Loop Tail Handling with Masks</div>
+    <p>One of the most powerful uses of AVX-512 masking is clean loop tail handling. Instead of scalar fallback code for the last &lt;16 elements, create a tail mask: <code>__mmask16 tail = (1u &lt;&lt; remaining) - 1</code>, then use masked load/compute/store with this mask. This eliminates all scalar fallback code and is the recommended AVX-512 idiom.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ SHUFFLE ═══════════════════════ -->
+<section id="shuffle">
+<div class="section-inner">
+  <div class="section-label">Chapter 07</div>
+  <h2 class="section-title">Shuffle, Permute & Blend</h2>
+  <p class="section-intro">Shuffles are the most powerful — and most confusing — part of SIMD. They let you rearrange data within and between registers, enabling algorithms that seem inherently sequential.</p>
+
+  <div class="prose fade-in">
+    <h3>The shuffle taxonomy</h3>
+    <p>SIMD shuffle instructions form a complex family. Understanding the distinctions is critical for choosing the right instruction and understanding performance:</p>
+
+    <p><strong>In-lane vs. cross-lane</strong> — Some shuffle instructions only rearrange elements within a 128-bit <em>lane</em> of a 256-bit register. The 256-bit register is treated as two independent 128-bit halves. Cross-lane operations can move elements between the two halves but are typically slower.</p>
+
+    <p><strong>Immediate vs. variable index</strong> — Some shuffles use a compile-time immediate (fixed at compile time): <code>_mm_shuffle_ps(a, b, 0b11001001)</code>. Others use a runtime vector index: <code>_mm256_permutevar8x32_ps(a, idx)</code>. Variable shuffles are more flexible but may have higher latency.</p>
+
+    <p><strong>Within-register vs. two-register</strong> — Some shuffles pick elements from a single source. Others interleave or blend from two sources.</p>
+
+    <h3>The 128-bit lane boundary in AVX2</h3>
+    <p>A fundamental quirk of AVX2: most operations work within the 128-bit lane boundary. A 256-bit register is effectively treated as two independent 128-bit registers for most shuffle operations. <code>VPSHUFB</code> (byte shuffle) operates within each 128-bit lane independently, for example. To move data across the 128-bit boundary, you need <code>VPERM2F128</code>, <code>VPERMPD</code>, or <code>VPERMPS</code>.</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Shuffle & Permute reference</div></div>
+    <pre><span class="cmt">/* ── PSHUFD: rearrange 32-bit integers (in-lane, immediate) ── */</span>
+<span class="cmt">// Immediate format: two 2-bit selectors per output lane (bits 0..7 → lanes 3..0)</span>
+<span class="cmt">// _MM_SHUFFLE(z, y, x, w) macro: builds the immediate</span>
+<span class="type">__m128i</span> a = <span class="fn">_mm_set_epi32</span>(<span class="num">3</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">0</span>);
+<span class="type">__m128i</span> r = <span class="fn">_mm_shuffle_epi32</span>(a, <span class="fn">_MM_SHUFFLE</span>(<span class="num">0</span>,<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>));
+<span class="cmt">// r = [3,2,1,0] → [0,1,2,3] — reversed</span>
+
+<span class="cmt">/* ── SHUFPS: blend elements from two 128-bit float vectors ── */</span>
+<span class="type">__m128</span> fa = <span class="fn">_mm_set_ps</span>(<span class="num">3.f</span>,<span class="num">2.f</span>,<span class="num">1.f</span>,<span class="num">0.f</span>);
+<span class="type">__m128</span> fb = <span class="fn">_mm_set_ps</span>(<span class="num">7.f</span>,<span class="num">6.f</span>,<span class="num">5.f</span>,<span class="num">4.f</span>);
+<span class="type">__m128</span> fr = <span class="fn">_mm_shuffle_ps</span>(fa, fb, <span class="fn">_MM_SHUFFLE</span>(<span class="num">3</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">0</span>));
+<span class="cmt">// lower 2 lanes from fa, upper 2 from fb</span>
+
+<span class="cmt">/* ── PSHUFB (SSSE3): byte-granularity shuffle, in-lane, variable ── */</span>
+<span class="cmt">// Index byte 0..15: which source byte goes to each destination byte
+// If index bit 7 = 1: output lane is zeroed</span>
+<span class="type">__m128i</span> data  = <span class="fn">_mm_set_epi8</span>(<span class="num">15</span>,<span class="num">14</span>,<span class="num">13</span>,<span class="num">12</span>,<span class="num">11</span>,<span class="num">10</span>,<span class="num">9</span>,<span class="num">8</span>,<span class="num">7</span>,<span class="num">6</span>,<span class="num">5</span>,<span class="num">4</span>,<span class="num">3</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">0</span>);
+<span class="type">__m128i</span> ctrl  = <span class="fn">_mm_set_epi8</span>(<span class="num">0</span>,<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>,<span class="num">6</span>,<span class="num">7</span>,<span class="num">8</span>,<span class="num">9</span>,<span class="num">10</span>,<span class="num">11</span>,<span class="num">12</span>,<span class="num">13</span>,<span class="num">14</span>,<span class="num">15</span>);
+<span class="type">__m128i</span> shuf  = <span class="fn">_mm_shuffle_epi8</span>(data, ctrl); <span class="cmt">// byte-reverse</span>
+
+<span class="cmt">/* ── AVX2 VPERMD: fully variable 32-bit element permute across 256b ── */</span>
+<span class="type">__m256i</span> src = <span class="fn">_mm256_set_epi32</span>(<span class="num">7</span>,<span class="num">6</span>,<span class="num">5</span>,<span class="num">4</span>,<span class="num">3</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">0</span>);
+<span class="type">__m256i</span> idx = <span class="fn">_mm256_set_epi32</span>(<span class="num">0</span>,<span class="num">2</span>,<span class="num">4</span>,<span class="num">6</span>,<span class="num">1</span>,<span class="num">3</span>,<span class="num">5</span>,<span class="num">7</span>); <span class="cmt">// pick any src lane</span>
+<span class="type">__m256i</span> out = <span class="fn">_mm256_permutevar8x32_epi32</span>(src, idx);
+<span class="cmt">// Crosses the 128-bit lane boundary! Indices 0..7 select from any lane in src.
+// Very useful — this is the "full permute" instruction AVX2 was missing until Haswell.</span>
+
+<span class="cmt">/* ── Unpack / interleave ── */</span>
+<span class="type">__m128i</span> lo = <span class="fn">_mm_unpacklo_epi32</span>(a, b); <span class="cmt">// [a0,b0,a1,b1]</span>
+<span class="type">__m128i</span> hi = <span class="fn">_mm_unpackhi_epi32</span>(a, b); <span class="cmt">// [a2,b2,a3,b3]</span>
+<span class="cmt">// Unpack is the fundamental building block for transposing data (AoS ↔ SoA)</span>
+
+<span class="cmt">/* ── Blend (immediate) ── */</span>
+<span class="cmt">// BLENDPS: pick each float32 from a or b based on immediate bit</span>
+<span class="type">__m128</span> blended = <span class="fn">_mm_blend_ps</span>(fa, fb, <span class="num">0b1010</span>);
+<span class="cmt">// bit 0=0: take fa[0], bit 1=1: take fb[1], etc.</span>
+<span class="cmt">// [fa[0], fb[1], fa[2], fb[3]]</span></pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>AoS vs SoA — the layout problem that shuffles solve</h3>
+    <p>One of the most important applications of SIMD shuffles is data layout transformation. Most code naturally uses <em>Array of Structures</em> (AoS) layout: <code>[{x,y,z}, {x,y,z}, {x,y,z}, ...]</code>. But SIMD prefers <em>Structure of Arrays</em> (SoA) layout: <code>{[x,x,x,...], [y,y,y,...], [z,z,z,...]}</code> where each component is contiguous in memory.</p>
+    <p>When your data is AoS (often unavoidable due to cache locality needs in scalar code), you must transpose it into SoA before SIMD processing and transpose back afterward. A 4×4 float transpose using unpack and blend operations is a classic example:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — 4×4 float matrix transpose with SIMD (SSE)</div></div>
+    <pre><span class="cmt">// Input: 4 rows of 4 floats (row-major)
+// Output: transposed in-place using xmm registers</span>
+<span class="kw">static inline void</span> <span class="fn">transpose4x4</span>(<span class="type">__m128</span> *r0, <span class="type">__m128</span> *r1, <span class="type">__m128</span> *r2, <span class="type">__m128</span> *r3) {
+    <span class="cmt">// Step 1: interleave pairs of rows</span>
+    <span class="type">__m128</span> t0 = <span class="fn">_mm_unpacklo_ps</span>(*r0, *r1); <span class="cmt">// [r0[0],r1[0],r0[1],r1[1]]</span>
+    <span class="type">__m128</span> t1 = <span class="fn">_mm_unpackhi_ps</span>(*r0, *r1); <span class="cmt">// [r0[2],r1[2],r0[3],r1[3]]</span>
+    <span class="type">__m128</span> t2 = <span class="fn">_mm_unpacklo_ps</span>(*r2, *r3); <span class="cmt">// [r2[0],r3[0],r2[1],r3[1]]</span>
+    <span class="type">__m128</span> t3 = <span class="fn">_mm_unpackhi_ps</span>(*r2, *r3); <span class="cmt">// [r2[2],r3[2],r2[3],r3[3]]</span>
+
+    <span class="cmt">// Step 2: interleave pairs of pairs</span>
+    *r0 = <span class="fn">_mm_movelh_ps</span>(t0, t2);  <span class="cmt">// [r0[0],r1[0],r2[0],r3[0]] — column 0</span>
+    *r1 = <span class="fn">_mm_movehl_ps</span>(t2, t0);  <span class="cmt">// [r0[1],r1[1],r2[1],r3[1]] — column 1</span>
+    *r2 = <span class="fn">_mm_movelh_ps</span>(t1, t3);  <span class="cmt">// [r0[2],r1[2],r2[2],r3[2]] — column 2</span>
+    *r3 = <span class="fn">_mm_movehl_ps</span>(t3, t1);  <span class="cmt">// [r0[3],r1[3],r2[3],r3[3]] — column 3</span>
+}
+<span class="cmt">// 8 instructions total. The macro _MM_TRANSPOSE4_PS does exactly this.</span></pre>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ ALGORITHMS ═══════════════════════ -->
+<section id="algorithms">
+<div class="section-inner">
+  <div class="section-label">Chapter 08</div>
+  <h2 class="section-title">Vectorized Algorithms</h2>
+  <p class="section-intro">This chapter shows how real algorithms are vectorized — with the reasoning behind every decision.</p>
+
+  <div class="prose fade-in">
+    <h3>Dot product (horizontal reduction)</h3>
+    <p>The dot product of two vectors requires a <em>reduction</em>: summing all lane results into a single scalar. Reductions are expensive because SIMD is fundamentally parallel — combining across lanes requires shuffles. The pattern is to progressively halve the register, adding pairs:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Vectorized dot product with horizontal reduction</div></div>
+    <pre><span class="kw">float</span> <span class="fn">dot_product_avx</span>(<span class="kw">const</span> <span class="type">float</span>* a, <span class="kw">const</span> <span class="type">float</span>* b, <span class="type">int</span> n) {
+    <span class="type">__m256</span> acc0 = <span class="fn">_mm256_setzero_ps</span>();   <span class="cmt">// 4 accumulators to break FMA chain</span>
+    <span class="type">__m256</span> acc1 = <span class="fn">_mm256_setzero_ps</span>();   <span class="cmt">// dependency: each FMA waits ~4 cycles</span>
+    <span class="type">__m256</span> acc2 = <span class="fn">_mm256_setzero_ps</span>();   <span class="cmt">// using 4 hides that latency</span>
+    <span class="type">__m256</span> acc3 = <span class="fn">_mm256_setzero_ps</span>();
+
+    <span class="type">int</span> i = <span class="num">0</span>;
+    <span class="kw">for</span> (; i &lt;= n - <span class="num">32</span>; i += <span class="num">32</span>) {   <span class="cmt">// process 32 floats per iteration</span>
+        acc0 = <span class="fn">_mm256_fmadd_ps</span>(<span class="fn">_mm256_loadu_ps</span>(a+i),
+                                <span class="fn">_mm256_loadu_ps</span>(b+i), acc0);
+        acc1 = <span class="fn">_mm256_fmadd_ps</span>(<span class="fn">_mm256_loadu_ps</span>(a+i+ <span class="num">8</span>),
+                                <span class="fn">_mm256_loadu_ps</span>(b+i+ <span class="num">8</span>), acc1);
+        acc2 = <span class="fn">_mm256_fmadd_ps</span>(<span class="fn">_mm256_loadu_ps</span>(a+i+<span class="num">16</span>),
+                                <span class="fn">_mm256_loadu_ps</span>(b+i+<span class="num">16</span>), acc2);
+        acc3 = <span class="fn">_mm256_fmadd_ps</span>(<span class="fn">_mm256_loadu_ps</span>(a+i+<span class="num">24</span>),
+                                <span class="fn">_mm256_loadu_ps</span>(b+i+<span class="num">24</span>), acc3);
+    }
+
+    <span class="cmt">/* Combine accumulators */</span>
+    acc0 = <span class="fn">_mm256_add_ps</span>(acc0, acc1);
+    acc2 = <span class="fn">_mm256_add_ps</span>(acc2, acc3);
+    acc0 = <span class="fn">_mm256_add_ps</span>(acc0, acc2);
+
+    <span class="cmt">/* ── Horizontal reduction: 8 floats → 1 float ── */</span>
+    <span class="cmt">// Step 1: add upper 128b half to lower half</span>
+    <span class="type">__m128</span> hi  = <span class="fn">_mm256_extractf128_ps</span>(acc0, <span class="num">1</span>); <span class="cmt">// lanes 4..7</span>
+    <span class="type">__m128</span> lo  = <span class="fn">_mm256_castps256_ps128</span>(acc0);     <span class="cmt">// lanes 0..3 (zero-cost cast)</span>
+    <span class="type">__m128</span> sum = <span class="fn">_mm_add_ps</span>(lo, hi);    <span class="cmt">// [0+4, 1+5, 2+6, 3+7]</span>
+
+    <span class="cmt">// Step 2: hadd pairs</span>
+    sum = <span class="fn">_mm_hadd_ps</span>(sum, sum);         <span class="cmt">// [(0+4)+(1+5), (2+6)+(3+7), ...]</span>
+    sum = <span class="fn">_mm_hadd_ps</span>(sum, sum);         <span class="cmt">// [total, ...]</span>
+
+    <span class="type">float</span> result = <span class="fn">_mm_cvtss_f32</span>(sum);   <span class="cmt">// extract lowest lane as scalar</span>
+
+    <span class="cmt">/* Scalar tail for remaining elements */</span>
+    <span class="kw">for</span> (; i &lt; n; i++) result += a[i] * b[i];
+
+    <span class="kw">return</span> result;
+}</pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>String processing — SIMD strcmp</h3>
+    <p>SSE4.2 introduced <code>PCMPISTRI</code> and <code>PCMPISTRM</code> — hardware string comparison instructions designed for pattern matching. They can find null terminators, compare character sets, and find substrings in a single instruction. <code>PCMPISTRI</code> returns an index; <code>PCMPISTRM</code> returns a mask. The control byte selects the comparison mode.</p>
+
+    <p>For general SIMD string processing without SSE4.2, you process 16 or 32 characters at a time using PSHUFB for table lookups:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — SIMD lowercase conversion (16 chars at once, SSSE3)</div></div>
+    <pre><span class="cmt">// Convert ASCII uppercase to lowercase for 16 bytes simultaneously</span>
+<span class="kw">void</span> <span class="fn">to_lower_sse</span>(<span class="type">char</span>* s, <span class="type">int</span> n) {
+    <span class="type">__m128i</span> upper_A  = <span class="fn">_mm_set1_epi8</span>(<span class="str">'A'</span> - <span class="num">1</span>);   <span class="cmt">// 0x40</span>
+    <span class="type">__m128i</span> upper_Z  = <span class="fn">_mm_set1_epi8</span>(<span class="str">'Z'</span>);       <span class="cmt">// 0x5A</span>
+    <span class="type">__m128i</span> lo_delta = <span class="fn">_mm_set1_epi8</span>(<span class="num">32</span>);        <span class="cmt">// 'a' - 'A' = 32</span>
+
+    <span class="type">int</span> i = <span class="num">0</span>;
+    <span class="kw">for</span> (; i &lt;= n - <span class="num">16</span>; i += <span class="num">16</span>) {
+        <span class="type">__m128i</span> chunk = <span class="fn">_mm_loadu_si128</span>((<span class="type">__m128i_u</span>*)(s + i));
+
+        <span class="cmt">// Compute mask: byte is uppercase if 'A'-1 < byte <= 'Z'</span>
+        <span class="type">__m128i</span> above_A = <span class="fn">_mm_cmpgt_epi8</span>(chunk, upper_A);
+        <span class="type">__m128i</span> below_Z = <span class="fn">_mm_cmpgt_epi8</span>(upper_Z, chunk); <span class="cmt">// Z > chunk means chunk < Z</span>
+
+        <span class="cmt">// Note: _mm_cmple_epi8 doesn't exist, use Z >= chunk via cmpgt(Z+1, chunk)</span>
+        <span class="type">__m128i</span> is_upper = <span class="fn">_mm_and_si128</span>(above_A, below_Z); <span class="cmt">// &amp;: both conditions</span>
+
+        <span class="cmt">// Only add 32 to uppercase bytes (AND mask with delta)</span>
+        <span class="type">__m128i</span> delta = <span class="fn">_mm_and_si128</span>(is_upper, lo_delta);
+        chunk = <span class="fn">_mm_add_epi8</span>(chunk, delta);
+
+        <span class="fn">_mm_storeu_si128</span>((<span class="type">__m128i_u</span>*)(s + i), chunk);
+    }
+    <span class="kw">for</span> (; i &lt; n; i++) s[i] |= (<span class="fn">tolower</span>((unsigned char)s[i]));
+}</pre>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ COMPILERS ═══════════════════════ -->
+<section id="compilers">
+<div class="section-inner">
+  <div class="section-label">Chapter 09</div>
+  <h2 class="section-title">Compiler Auto-Vectorization</h2>
+  <p class="section-intro">Modern compilers (GCC, Clang, MSVC) can automatically generate SIMD code from scalar loops. Understanding when and why this works — and when it fails — is essential.</p>
+
+  <div class="prose fade-in">
+    <h3>What the vectorizer needs</h3>
+    <p>Auto-vectorization is a loop transformation. The compiler analyzes a scalar loop and asks: can I replace N iterations of this loop with 1 iteration processing N elements at once? For this to be safe and profitable, the compiler needs to verify:</p>
+
+    <p><strong>1. No loop-carried dependencies</strong> — Iteration N must not read a value written by iteration N-1. <code>a[i] = a[i-1] + 1</code> cannot be vectorized because each element depends on the previous. <code>a[i] = b[i] * 2</code> can be vectorized.</p>
+
+    <p><strong>2. No pointer aliasing</strong> — If two pointers might point to overlapping memory, the compiler can't reorder the accesses. Use <code>restrict</code> to tell the compiler the pointers don't alias.</p>
+
+    <p><strong>3. Known or analyzable trip count</strong> — The compiler needs to know the loop executes a reasonable number of times. A loop over N elements where N is known at compile time or can be propagated from a function parameter is easily vectorized.</p>
+
+    <p><strong>4. Simple control flow</strong> — Branches inside the loop body break vectorization unless the compiler can convert them to predicated SIMD operations (blend/mask).</p>
+
+    <h3>Compiler flags for vectorization</h3>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">Shell — Compiler flags</div></div>
+    <pre><span class="cmt"># GCC / Clang — enable auto-vectorization and target ISA</span>
+gcc -O2 -march=native -fvectorize -ftree-vectorize myfile.c
+<span class="cmt"># -O2 enables basic vectorization; -O3 enables more aggressive</span>
+<span class="cmt"># -march=native: use all features of the current CPU</span>
+<span class="cmt"># -march=x86-64-v3: target AVX2+FMA baseline (common server minimum)</span>
+<span class="cmt"># -march=x86-64-v4: target AVX-512</span>
+
+<span class="cmt"># Get vectorization report (what was/wasn't vectorized and why)</span>
+gcc -O2 -march=native -fopt-info-vec-optimized -fopt-info-vec-missed myfile.c
+clang -O2 -march=native -Rpass=loop-vectorize -Rpass-missed=loop-vectorize myfile.c
+
+<span class="cmt"># Enable FMA and AVX2 explicitly</span>
+gcc -O2 -mavx2 -mfma myfile.c
+
+<span class="cmt"># MSVC</span>
+cl /O2 /arch:AVX2 /Qvec-report:2 myfile.c</pre>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Idioms that help the auto-vectorizer</div></div>
+    <pre><span class="cmt">/* ── Use restrict to eliminate aliasing concerns ── */</span>
+<span class="kw">void</span> <span class="fn">add_arrays</span>(<span class="type">float</span> *<span class="kw">restrict</span> c,
+                <span class="kw">const</span> <span class="type">float</span> *<span class="kw">restrict</span> a,
+                <span class="kw">const</span> <span class="type">float</span> *<span class="kw">restrict</span> b,
+                <span class="type">int</span> n) {
+    <span class="kw">for</span> (<span class="type">int</span> i = <span class="num">0</span>; i &lt; n; i++) c[i] = a[i] + b[i];  <span class="cmt">// vectorizes cleanly</span>
+}
+
+<span class="cmt">/* ── Alignment hints ── */</span>
+<span class="fn">__attribute__</span>((aligned(<span class="num">32</span>))) <span class="type">float</span> buf[<span class="num">1024</span>];  <span class="cmt">// static aligned array</span>
+<span class="cmt">// or: void f(float *__restrict__ __attribute__((aligned(32))) p);</span>
+
+<span class="cmt">/* ── Loop that auto-vectorizes to AVX2 (with -mavx2 -mfma) ── */</span>
+<span class="kw">void</span> <span class="fn">saxpy</span>(<span class="type">float</span> *<span class="kw">restrict</span> y, <span class="kw">const</span> <span class="type">float</span> *<span class="kw">restrict</span> x, <span class="type">float</span> a, <span class="type">int</span> n) {
+    <span class="kw">for</span> (<span class="type">int</span> i = <span class="num">0</span>; i &lt; n; i++) y[i] = a * x[i] + y[i];  <span class="cmt">// → VFMADD231PS</span>
+}
+
+<span class="cmt">/* ── Loop that does NOT auto-vectorize (loop-carried dependency) ── */</span>
+<span class="kw">void</span> <span class="fn">prefix_sum</span>(<span class="type">float</span> *a, <span class="type">int</span> n) {
+    <span class="kw">for</span> (<span class="type">int</span> i = <span class="num">1</span>; i &lt; n; i++) a[i] += a[i-<span class="num">1</span>]; <span class="cmt">// NOT vectorizable as-is</span>
+    <span class="cmt">// Vectorizing prefix sums requires a different algorithm (parallel scan)</span>
+}
+
+<span class="cmt">/* ── GCC pragma to force/prevent vectorization ── */</span>
+<span class="dir">#pragma GCC ivdep</span>              <span class="cmt">// "ignore vector dependencies" — trust me, no deps</span>
+<span class="kw">for</span> (<span class="type">int</span> i = <span class="num">0</span>; i &lt; n; i++) a[i] = b[i] + c[i];
+
+<span class="dir">#pragma GCC unroll 4</span>           <span class="cmt">// manually unroll loop (helps expose ILP to vectorizer)</span>
+<span class="kw">for</span> (<span class="type">int</span> i = <span class="num">0</span>; i &lt; n; i++) a[i] *= <span class="num">2.f</span>;
+
+<span class="cmt">/* Clang OpenMP SIMD (portable) */</span>
+<span class="dir">#pragma omp simd</span>
+<span class="kw">for</span> (<span class="type">int</span> i = <span class="num">0</span>; i &lt; n; i++) c[i] = a[i] * b[i];</pre>
+  </div>
+
+  <div class="info-box note fade-in">
+    <div class="info-box-title">Godbolt — Your Best Friend</div>
+    <p>Always verify auto-vectorization by inspecting the generated assembly. <strong>Compiler Explorer</strong> (godbolt.org) lets you type C code and see the assembly output with color-coded mapping. Look for <code>vmovups</code>, <code>vaddps</code>, <code>vfmadd</code> — these confirm vectorization happened. A loop with only <code>movss</code> and <code>addss</code> is scalar and was not vectorized.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ PITFALLS ═══════════════════════ -->
+<section id="pitfalls">
+<div class="section-inner">
+  <div class="section-label">Chapter 10</div>
+  <h2 class="section-title">Pitfalls & Anti-Patterns</h2>
+  <p class="section-intro">SIMD code has failure modes that don't exist in scalar code. These are the most common ways to write code that's slower or subtly wrong.</p>
+
+  <div class="prose fade-in">
+    <h3>1. The SSE/AVX transition penalty</h3>
+    <p>Mixing legacy SSE instructions (without the <code>v</code> prefix) with VEX-encoded AVX instructions in the same code path triggers a false dependency hazard. The CPU must preserve the upper 128 bits of ymm registers when executing legacy SSE, which creates a stall when switching between SSE and AVX. Always use the VEX-encoded variants. GCC and Clang do this automatically with <code>-mavx</code>. Check the assembly for unexpected <code>vzeroupper</code> instructions — they're a sign the compiler is cleaning up after this issue.</p>
+
+    <h3>2. Excessive horizontal operations</h3>
+    <p><code>HADD</code>, <code>HSUB</code>, and <code>HMAX</code> operations look appealing but are often slow. They are typically implemented as a shuffle followed by a vertical operation, and some CPUs implement them directly but with higher latency than two separate vertical ops. Prefer accumulating in multiple vertical accumulators and doing a final reduction at the end.</p>
+
+    <h3>3. Denormal floats — catastrophic slowdown</h3>
+    <p>IEEE 754 denormal (subnormal) numbers are values very close to zero. Some CPUs handle denormals in microcode — 50–100× slower than normal float operations. This is a real-world catastrophe in audio DSP and ML. The fix: set the FPU to flush-to-zero mode:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Denormal handling</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;immintrin.h&gt;</span>
+
+<span class="cmt">/* ── Flush denormals to zero — critical for audio/ML performance ── */</span>
+<span class="kw">static inline void</span> <span class="fn">disable_denormals</span>(<span class="kw">void</span>) {
+    <span class="cmt">// MXCSR bits: bit 15 = FZ (Flush-to-Zero), bit 6 = DAZ (Denormals-Are-Zero)</span>
+    <span class="fn">_MM_SET_FLUSH_ZERO_MODE</span>(_MM_FLUSH_ZERO_ON);       <span class="cmt">// outputs: flush to zero</span>
+    <span class="fn">_MM_SET_DENORMALS_ZERO_MODE</span>(_MM_DENORMALS_ZERO_ON); <span class="cmt">// inputs: treat as zero</span>
+    <span class="cmt">// Equivalent: _mm_setcsr(_mm_getcsr() | 0x8040);</span>
+}
+
+<span class="cmt">/* Check if a float value is denormal */</span>
+<span class="kw">static inline</span> <span class="type">bool</span> <span class="fn">is_denormal</span>(<span class="type">float</span> x) {
+    <span class="type">uint32_t</span> bits;
+    <span class="fn">memcpy</span>(&amp;bits, &amp;x, <span class="num">4</span>);
+    <span class="kw">return</span> ((bits &amp; <span class="num">0x7F800000</span>) == <span class="num">0</span>) &amp;&amp; ((bits &amp; <span class="num">0x007FFFFF</span>) != <span class="num">0</span>);
+}</pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>4. Type punning — use memcpy, not pointer casts</h3>
+    <p>A common pattern is treating the bits of a float as an integer (e.g., for the abs trick above). <strong>Never use a pointer cast</strong> — that's undefined behavior in C and C++ due to strict aliasing rules. Use <code>memcpy</code>, which the compiler optimizes to a register move:</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — Type punning: correct vs incorrect</div></div>
+    <pre><span class="cmt">// WRONG: undefined behavior (strict aliasing violation)</span>
+<span class="type">float</span> f = <span class="num">1.0f</span>;
+<span class="type">uint32_t</span> i = *(<span class="type">uint32_t</span>*)&amp;f;  <span class="cmt">// ← DO NOT DO THIS</span>
+
+<span class="cmt">// CORRECT: use memcpy</span>
+<span class="type">float</span> f2 = <span class="num">1.0f</span>;
+<span class="type">uint32_t</span> i2;
+<span class="fn">memcpy</span>(&amp;i2, &amp;f2, <span class="num">4</span>);  <span class="cmt">// compiles to a single register move</span>
+
+<span class="cmt">// ALSO CORRECT: C++ std::bit_cast (C++20)</span>
+<span class="type">uint32_t</span> i3 = std::bit_cast&lt;<span class="type">uint32_t</span>&gt;(f2);
+
+<span class="cmt">// ALSO CORRECT: union (C only, not C++)</span>
+<span class="kw">union</span> { <span class="type">float</span> f; <span class="type">uint32_t</span> i; } pun;
+pun.f = <span class="num">1.0f</span>;
+<span class="type">uint32_t</span> i4 = pun.i;  <span class="cmt">// valid in C99, undefined in C++ (but works in practice)</span></pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>5. Assuming faster = always use widest register</h3>
+    <p>Wider is not always faster. As mentioned: AVX-512 can cause frequency downclocking on older Intel. Even AVX2 vs SSE4: on a lightly-loaded pipeline, SSE4 instructions may have lower latency and higher throughput per operation because the execution units are fully utilized at the narrower width. Profile before widening.</p>
+
+    <h3>6. Not unrolling enough — hiding FMA latency</h3>
+    <p>FMA has a latency of 4–5 cycles on most architectures but a throughput of 0.5 cycles (2/cycle on port 0+1). If your FMA loop has a data dependency chain — each iteration's FMA uses the previous iteration's output as its accumulator — you're bottlenecked on latency (1 FMA per 4–5 cycles) instead of throughput (2 FMAs per cycle). The fix is to use 4–8 independent accumulators, as shown in the dot product example above.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ ARM ═══════════════════════ -->
+<section id="arm">
+<div class="section-inner">
+  <div class="section-label">Chapter 11</div>
+  <h2 class="section-title">ARM NEON & SVE</h2>
+  <p class="section-intro">ARM's SIMD ecosystem is different from x86 in important ways — particularly SVE's scalable vector model, which is a paradigm shift.</p>
+
+  <div class="prose fade-in">
+    <h3>NEON — ARM's fixed-width SIMD</h3>
+    <p>NEON (Advanced SIMD) is ARM's equivalent of SSE/AVX. It provides 128-bit vector registers (v0–v31, also accessible as 64-bit d0–d31 and 32-bit s0–s31). Unlike x86, NEON was designed into AArch64 from the start — it's mandatory on all AArch64 implementations, not an optional extension.</p>
+
+    <p>NEON intrinsics use a different naming convention: <code>v&lt;op&gt;&lt;dtype&gt;_&lt;lane_type&gt;</code>. For example: <code>vaddq_f32</code> (add, q=128-bit, f32 elements). The <code>q</code> suffix means 128-bit ("quad"); without it, it's 64-bit ("double").</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — ARM NEON intrinsics</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;arm_neon.h&gt;</span>
+
+<span class="cmt">/* ── NEON types (analogous to Intel __m128) ── */</span>
+<span class="type">float32x4_t</span> a, b, c;   <span class="cmt">// 4×float32 (128-bit)</span>
+<span class="type">int16x8_t</span>   ia, ib;   <span class="cmt">// 8×int16 (128-bit)</span>
+<span class="type">uint8x16_t</span>  ua;        <span class="cmt">// 16×uint8 (128-bit)</span>
+<span class="type">float32x2_t</span> da;        <span class="cmt">// 2×float32 (64-bit, "doubleword")</span>
+
+<span class="cmt">/* ── Load / Store ── */</span>
+a = <span class="fn">vld1q_f32</span>(ptr);              <span class="cmt">// unaligned 128-bit load (aligned auto-selected)</span>
+<span class="fn">vst1q_f32</span>(ptr, a);               <span class="cmt">// store</span>
+a = <span class="fn">vdupq_n_f32</span>(<span class="num">1.0f</span>);           <span class="cmt">// broadcast (dup = duplicate)</span>
+a = <span class="fn">vld1q_dup_f32</span>(ptr);          <span class="cmt">// load and broadcast</span>
+
+<span class="cmt">/* Multi-register load (de-interleave) — unique NEON feature */</span>
+<span class="type">float32x4x3_t</span> rgb = <span class="fn">vld3q_f32</span>(ptr);  <span class="cmt">// loads 12 floats, de-interleaves RGB</span>
+<span class="cmt">// rgb.val[0] = R channel, rgb.val[1] = G, rgb.val[2] = B</span>
+<span class="cmt">// This is the NEON killer feature for AoS→SoA — no manual transpose needed!</span>
+
+<span class="cmt">/* ── Arithmetic ── */</span>
+c = <span class="fn">vaddq_f32</span>(a, b);             <span class="cmt">// c[i] = a[i] + b[i]</span>
+c = <span class="fn">vmulq_f32</span>(a, b);             <span class="cmt">// c[i] = a[i] * b[i]</span>
+c = <span class="fn">vmlaq_f32</span>(c, a, b);          <span class="cmt">// c[i] = c[i] + a[i]*b[i]  (mul-accumulate)</span>
+c = <span class="fn">vmaxq_f32</span>(a, b);             <span class="cmt">// c[i] = max(a[i], b[i])</span>
+c = <span class="fn">vrecpeq_f32</span>(a);             <span class="cmt">// 1/a[i] approximation</span>
+
+<span class="cmt">/* FMA (AArch64 only, not ARMv7 NEON) */</span>
+c = <span class="fn">vfmaq_f32</span>(c, a, b);          <span class="cmt">// c[i] = c[i] + a[i]*b[i] (true FMA)</span>
+c = <span class="fn">vfmaq_lane_f32</span>(c, a, da, <span class="num">0</span>); <span class="cmt">// multiply each a[i] by da[0], accumulate</span>
+
+<span class="cmt">/* ── Comparison ── */</span>
+<span class="type">uint32x4_t</span> mask = <span class="fn">vcgtq_f32</span>(a, b);  <span class="cmt">// a > b, returns 0xFFFFFFFF or 0</span>
+c = <span class="fn">vbslq_f32</span>(mask, a, b);          <span class="cmt">// blend: c[i] = mask[i] ? a[i] : b[i]</span>
+
+<span class="cmt">/* ── Shuffle / permute ── */</span>
+<span class="type">uint8x16_t</span> tbl = <span class="fn">vtbl1q_u8</span>(src, idx);  <span class="cmt">// table lookup (like x86 PSHUFB)</span>
+c = <span class="fn">vextq_f32</span>(a, b, <span class="num">2</span>);               <span class="cmt">// [a2,a3,b0,b1] — extract and shift</span>
+c = <span class="fn">vrev64q_f32</span>(a);                   <span class="cmt">// reverse pairs: [a1,a0,a3,a2]</span>
+c = <span class="fn">vtrn1q_f32</span>(a, b);                 <span class="cmt">// [a0,b0,a2,b2] — transpose even</span>
+
+<span class="cmt">/* Horizontal reduce */</span>
+<span class="type">float</span> total = <span class="fn">vaddvq_f32</span>(a);  <span class="cmt">// sum all 4 lanes → scalar (AArch64)</span></pre>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>SVE — Scalable Vector Extension — a revolution</h3>
+    <p>SVE (and its successor SVE2) is ARM's answer to a fundamental problem: SIMD width keeps changing (128→256→512 bits), but code written for one width doesn't automatically benefit from wider hardware. SVE decouples the algorithm from the hardware width.</p>
+
+    <p>The core concept: <strong>SVE vector length is unknown at compile time</strong>. You query the hardware length at runtime using <code>svcntw()</code> (count of 32-bit elements). You write loops that process <code>vl</code> elements per iteration where <code>vl</code> is this hardware value. The same binary runs on SVE hardware with 128, 256, 512, or 2048-bit vectors without recompilation.</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header"><div class="code-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div><div class="code-lang">C — ARM SVE scalable vectorization</div></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;arm_sve.h&gt;</span>
+
+<span class="kw">void</span> <span class="fn">saxpy_sve</span>(<span class="type">float</span>* y, <span class="kw">const</span> <span class="type">float</span>* x, <span class="type">float</span> a, <span class="type">uint64_t</span> n) {
+    <span class="cmt">// svcntw() = number of float32 lanes — determined at RUNTIME by the hardware</span>
+    <span class="cmt">// On 128-bit SVE: svcntw() = 4
+    // On 512-bit SVE: svcntw() = 16
+    // Your code doesn't change.</span>
+    <span class="type">svfloat32_t</span> va = <span class="fn">svdup_n_f32</span>(a);       <span class="cmt">// broadcast a to all SVE lanes</span>
+
+    <span class="type">uint64_t</span> i = <span class="num">0</span>;
+    <span class="kw">for</span> (; i &lt; n; i += <span class="fn">svcntw</span>()) {
+        <span class="cmt">// svwhilelt_b32: create predicate mask for i .. i+vl-1, limited to n</span>
+        <span class="type">svbool_t</span> pg = <span class="fn">svwhilelt_b32</span>(i, n);   <span class="cmt">// handles loop tail automatically!</span>
+
+        <span class="type">svfloat32_t</span> vx = <span class="fn">svld1_f32</span>(pg, x + i);  <span class="cmt">// masked load</span>
+        <span class="type">svfloat32_t</span> vy = <span class="fn">svld1_f32</span>(pg, y + i);  <span class="cmt">// masked load</span>
+
+        vy = <span class="fn">svmla_f32_z</span>(pg, vy, va, vx);      <span class="cmt">// y = a*x + y (FMA), zeroed mask</span>
+
+        <span class="fn">svst1_f32</span>(pg, y + i, vy);               <span class="cmt">// masked store (safe at tail)</span>
+    }
+    <span class="cmt">// No scalar tail needed! svwhilelt automatically limits the last iteration.</span>
+}
+<span class="cmt">// This single function runs at optimal width on any SVE implementation:
+// Cortex-A55 (128b), Fujitsu A64FX (512b), AWS Graviton, Apple M-series, etc.</span></pre>
+  </div>
+
+  <div class="info-box tip fade-in">
+    <div class="info-box-title">SVE: The Future Model</div>
+    <p>SVE's length-agnostic model is where SIMD is heading. RISC-V's V extension uses the same philosophy (called "vsetvl"). It solves the "compile once, run on all future hardware widths" problem that has plagued x86 SIMD for decades. If you're writing new code targeting ARM servers (AWS Graviton, Ampere Altra), SVE is the preferred approach.</p>
+  </div>
+</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════ PERFORMANCE ═══════════════════════ -->
+<section id="performance">
+<div class="section-inner">
+  <div class="section-label">Chapter 12</div>
+  <h2 class="section-title">Performance Analysis & Profiling</h2>
+  <p class="section-intro">Understanding performance requires measurement. Here are the tools, metrics, and mental models for analyzing SIMD code.</p>
+
+  <div class="prose fade-in">
+    <h3>Peak throughput calculation</h3>
+    <p>To know whether your code is achieving its potential, first calculate the theoretical peak. For a 3.5 GHz CPU with AVX2:</p>
+    <p><strong>Float32 throughput</strong> = 3.5 GHz × 2 FMA units × 8 floats/unit × 2 ops/FMA = <strong>112 GFLOPS</strong></p>
+    <p>If your vectorized kernel achieves 30 GFLOPS, you're at 27% of peak. That's normal — memory bandwidth limits most real workloads. The arithmetic intensity (FLOPS per byte loaded) determines whether you're compute-bound or memory-bound. Use the <em>roofline model</em>: plot compute intensity vs. bandwidth ceiling.</p>
+
+    <h3>Key profiling tools</h3>
+  </div>
+
+  <div class="table-wrap fade-in">
+    <table>
+      <thead><tr><th>Tool</th><th>Platform</th><th>What it measures</th></tr></thead>
+      <tbody>
+        <tr><td>Intel VTune Profiler</td><td>Intel CPUs</td><td>Hotspots, vectorization, port utilization, cache misses, memory bandwidth</td></tr>
+        <tr><td>AMD uProf / CodeAnalyst</td><td>AMD CPUs</td><td>PMU counters, instruction mix, IPC</td></tr>
+        <tr><td>perf stat</td><td>Linux x86/ARM</td><td>Instruction count, IPC, cache misses, branch mispredictions</td></tr>
+        <tr><td>LIKWID</td><td>Linux x86</td><td>FLOP counters, memory bandwidth, SIMD vectorization ratio</td></tr>
+        <tr><td>IACA / LLVM-MCA</td><td>Any (static analysis)</td><td>Static throughput/latency estimation without running code</td></tr>
+        <tr><td>Intel SDE</td><td>x86 (emulator)</td><td>AVX-512 on non-AVX-512 hardware, instruction mix analysis</td></tr>
+        <tr><td>Arm Streamline</td><td>ARM</td><td>NEON utilization, IPC, memory subsystem</td></tr>
+        <tr><td>Godbolt + objdump</td><td>All</td><td>Assembly inspection, verifying vectorization happened</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>Typical achievable speedups by workload</h3>
+  </div>
+
+  <div class="benchmark-bars fade-in" id="bench-bars">
+    <div class="bench-item">
+      <div class="bench-label">Dense matrix multiply</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-green" style="width:90%">~8–12×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">Image convolution</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-blue" style="width:75%">~6–9×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">Dot product (float)</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-blue" style="width:65%">~5–7×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">String search</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-purple" style="width:55%">~4–7×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">Sort (vectorized)</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-amber" style="width:40%">~2–4×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">JSON/CSV parsing</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-teal" style="width:35%">~2–4×</div></div>
+    </div>
+    <div class="bench-item">
+      <div class="bench-label">Gather-heavy code</div>
+      <div class="bench-track"><div class="bench-fill bench-fill-amber" style="width:15%">~0.5–1.5×</div></div>
+    </div>
+  </div>
+
+  <div class="prose fade-in">
+    <h3>Amdahl's Law — the fundamental limit</h3>
+    <p>If only 50% of your code is vectorizable, the maximum speedup from perfect SIMD is 2×, regardless of how much you accelerate the vectorized portion. Profile first, find the true hotspot, then vectorize. SIMD is pointless on code that spends 5% of time in a loop.</p>
+
+    <h3>The memory bandwidth ceiling</h3>
+    <p>On a Zen 4 system with DDR5-5600 memory, peak bandwidth is ~90 GB/s. A dense float32 SAXPY (<code>y = a*x + y</code>) requires reading 8 bytes and writing 4 bytes per element: 12 bytes/element. At peak bandwidth that's 7.5 billion elements/second = 7.5 GFLOPS (2 ops per element). The CPU can do 300+ GFLOPS of float32. So SAXPY is fully memory-bound at 2.5% of compute peak. No amount of SIMD optimization changes this — the bottleneck is the memory bus.</p>
+
+    <p><strong>The rule: vectorize compute-bound kernels first</strong>. Identify whether your hotspot is memory-bound (bandwidth-limited) or compute-bound (FLOP-limited) before writing a single intrinsic. <code>perf stat -e instructions,cycles,cache-misses</code> and comparing the resulting IPC (instructions per cycle) to theoretical peak gives you an immediate answer.</p>
+  </div>
+
+  <div class="info-box note fade-in">
+    <div class="info-box-title">Further Reading</div>
+    <p>
+      <strong>Intel Intrinsics Guide</strong> — intrinsics.guide — searchable reference for every intrinsic with latency/throughput data.<br>
+      <strong>Agner Fog's optimization manuals</strong> — agner.org — the definitive reference for x86 instruction tables and microarchitecture details.<br>
+      <strong>ISPC compiler</strong> — Intel SPMD Program Compiler — high-level SIMD programming model that generates ISA-portable code.<br>
+      <strong>Highway library</strong> — google/highway — portable SIMD C++ library abstracting x86/ARM/RISC-V.<br>
+      <strong>simdjson / simdutf</strong> — production examples of aggressive SIMD in JSON parsing and UTF-8 validation.
+    </p>
+  </div>
+
+</div>
+</section>
+
+</main>
+
+<footer>
+  <div>SIMD: From Hardware to Software · Complete Reference</div>
+  <div style="margin-top:8px;color:var(--text3)">SSE · AVX · AVX-512 · ARM NEON · SVE</div>
+</footer>
+
+<script>
+/* ── Intersection observer for fade-in ── */
+const observer = new IntersectionObserver(
+  entries => entries.forEach(e => e.isIntersecting && e.target.classList.add('visible')),
+  { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
+);
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+/* ── Active nav ── */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+const navObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => navObserver.observe(s));
+
+/* ── Build alignment diagram ── */
+function buildAlignDiagram() {
+  const colors0 = [], colors1 = [];
+  for (let i = 0; i < 32; i++) {
+    if (i < 8 || i >= 24) {
+      colors0.push(`<div class="mem-byte" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text3)">${i.toString(16).padStart(2,'0')}</div>`);
+    } else {
+      colors0.push(`<div class="mem-byte" style="background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);color:var(--green)">${i.toString(16).padStart(2,'0')}</div>`);
+    }
+  }
+  for (let i = 0; i < 32; i++) {
+    if (i < 4) {
+      colors1.push(`<div class="mem-byte" style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.3);color:var(--red)">${(i+28).toString(16).padStart(2,'0')}</div>`);
+    } else if (i < 12) {
+      colors1.push(`<div class="mem-byte" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:rgba(248,113,113,0.7)">${(i+28).toString(16).padStart(2,'0')}</div>`);
+    } else {
+      colors1.push(`<div class="mem-byte" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text3)">${(i+28).toString(16).padStart(2,'0')}</div>`);
+    }
+  }
+  const b0 = document.getElementById('align-bytes-0');
+  const b1 = document.getElementById('align-bytes-1');
+  if (b0) b0.innerHTML = colors0.join('');
+  if (b1) b1.innerHTML = colors1.join('');
+}
+
+/* ── Build gather diagram ── */
+function buildGatherDiagram() {
+  const vals = [10,20,30,40,50,60,70,80];
+  const idxs = [0,3,5,7];
+  const mem = document.getElementById('gather-mem');
+  const res = document.getElementById('gather-result');
+  if (!mem || !res) return;
+  mem.innerHTML = vals.map((v,i) => `
+    <div class="mem-cell">
+      <div class="mem-addr">[${i}]</div>
+      <div class="mem-val ${idxs.includes(i) ? 'highlighted' : ''}">${v}</div>
+    </div>`).join('');
+  res.innerHTML = idxs.map((idx,i) => `
+    <div class="mem-cell">
+      <div class="mem-addr">[${i}]</div>
+      <div class="mem-val highlighted">${vals[idx]}</div>
+    </div>`).join('');
+}
+
+buildAlignDiagram();
+buildGatherDiagram();
+</script>
+</body>
+</html>

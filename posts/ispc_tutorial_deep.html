@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISPC Programming — Deep Tutorial</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #0d0f17;
+    --surface: #12151f;
+    --surface2: #181c28;
+    --surface3: #1e2335;
+    --border: #252c40;
+    --accent: #5b9cf6;
+    --accent2: #8b6cf7;
+    --accent3: #3ecfb0;
+    --warn: #f5c542;
+    --danger: #f56565;
+    --text: #c8d3ee;
+    --text-dim: #606880;
+    --text-bright: #eef2ff;
+    --code-bg: #080a10;
+    --sidebar-w: 290px;
+    --content-max: 820px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15.5px;
+  }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  nav {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 0 0 60px;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .nav-brand {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+  .nav-brand .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.3px;
+  }
+  .nav-brand .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .nav-section-label {
+    padding: 14px 20px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  nav a {
+    display: block;
+    padding: 5px 20px 5px 26px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 12.5px;
+    border-left: 2px solid transparent;
+    transition: all 0.12s;
+    line-height: 1.5;
+  }
+  nav a:hover { color: var(--text-bright); background: rgba(91,156,246,0.05); border-left-color: var(--border); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(91,156,246,0.08); }
+
+  main {
+    margin-left: var(--sidebar-w);
+    padding: 0 56px 100px 56px;
+    max-width: calc(var(--sidebar-w) + var(--content-max) + 112px);
+    width: 100%;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 64px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 64px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(91,156,246,0.1);
+    border: 1px solid rgba(91,156,246,0.25);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 46px;
+    font-weight: 800;
+    color: var(--text-bright);
+    line-height: 1.12;
+    letter-spacing: -1.5px;
+    margin-bottom: 18px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 620px;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+  .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hero-tags span {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #7a8aaa;
+    font-size: 11.5px;
+    padding: 4px 11px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 80px; scroll-margin-top: 28px; }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-bright);
+    letter-spacing: -0.8px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2 .ch {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    background: rgba(91,156,246,0.1);
+    border: 1px solid rgba(91,156,246,0.2);
+    padding: 2px 9px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin: 40px 0 14px;
+    letter-spacing: -0.3px;
+  }
+
+  h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 28px 0 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h4::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  p { margin-bottom: 16px; }
+  p + p { margin-top: -4px; }
+
+  strong { color: var(--text-bright); font-weight: 600; }
+  em { color: #a0b4d8; font-style: italic; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  ul, ol { padding-left: 22px; margin-bottom: 16px; }
+  li { margin-bottom: 8px; line-height: 1.7; }
+  li::marker { color: var(--accent); }
+
+  /* ── CODE ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 26px;
+    overflow-x: auto;
+    margin: 18px 0 28px;
+    position: relative;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #abb2bf;
+  }
+  .lang-tag {
+    position: absolute;
+    top: 10px; right: 14px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: rgba(91,156,246,0.09);
+    color: #7ecde8;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid rgba(91,156,246,0.15);
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+
+  /* syntax */
+  .kw  { color: #c678dd; font-weight: 600; }
+  .ty  { color: #e5c07b; }
+  .fn  { color: #61afef; }
+  .cm  { color: #4a5268; font-style: italic; }
+  .st  { color: #98c379; }
+  .nu  { color: #d19a66; }
+  .pp  { color: #e06c75; }
+  .op  { color: #56b6c2; }
+  .bi  { color: #f7b34f; }  /* built-ins */
+
+  /* ── BOXES ── */
+  .box {
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 22px 0;
+    border-left: 3px solid;
+    font-size: 14.5px;
+    line-height: 1.75;
+  }
+  .box p { margin-bottom: 10px; }
+  .box p:last-child { margin-bottom: 0; }
+  .box-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+  .box-info   { background: rgba(91,156,246,0.07);  border-color: var(--accent); }
+  .box-tip    { background: rgba(62,207,176,0.07);  border-color: var(--accent3); }
+  .box-warn   { background: rgba(245,197,66,0.07);  border-color: var(--warn); }
+  .box-analogy{ background: rgba(139,108,247,0.07); border-color: var(--accent2); }
+  .box-info   .box-title { color: var(--accent); }
+  .box-tip    .box-title { color: var(--accent3); }
+  .box-warn   .box-title { color: var(--warn); }
+  .box-analogy .box-title { color: var(--accent2); }
+
+  /* ── DIAGRAM ── */
+  .diagram {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin: 20px 0 28px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: #7a8aaa;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .diagram .hi  { color: var(--accent); }
+  .diagram .hi2 { color: var(--accent3); }
+  .diagram .hi3 { color: var(--warn); }
+  .diagram .dim { color: #3a4256; }
+
+  /* ── COMPARE TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0 28px;
+    font-size: 13.5px;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--accent);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  td {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  td code { font-size: 12px; }
+  td strong { color: var(--text-bright); }
+
+  /* ── VISUAL ANNOTATIONS ── */
+  .annotated { position: relative; }
+  .callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .callout-num {
+    min-width: 24px; height: 24px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ── PERF BARS ── */
+  .perf-table { margin: 20px 0 28px; }
+  .perf-row { margin-bottom: 10px; }
+  .perf-label { font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: var(--text); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .perf-label span { color: var(--text-dim); }
+  .perf-track { background: var(--surface2); border-radius: 4px; height: 22px; overflow: hidden; border: 1px solid var(--border); }
+  .perf-fill { height: 100%; display: flex; align-items: center; padding-left: 10px; font-size: 11.5px; font-weight: 700; color: rgba(255,255,255,0.9); font-family: 'IBM Plex Mono', monospace; border-radius: 3px; }
+
+  /* ── MEMORY GRID ── */
+  .mem-grid { display: flex; gap: 3px; margin: 16px 0; flex-wrap: wrap; }
+  .mem-cell {
+    width: 48px; height: 38px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.3;
+    color: var(--text-dim);
+  }
+  .mem-cell .val { font-weight: 600; font-size: 12px; color: var(--text); }
+  .mem-cell.active { border-color: var(--accent); background: rgba(91,156,246,0.1); }
+  .mem-cell.active .val { color: var(--accent); }
+  .mem-cell.warm { border-color: var(--accent3); background: rgba(62,207,176,0.08); }
+  .mem-cell.warm .val { color: var(--accent3); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 960px) {
+    nav { display: none; }
+    main { margin-left: 0; padding: 20px 22px 80px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<nav>
+  <div class="nav-brand">
+    <div class="logo">ISPC Deep Guide</div>
+    <div class="sub">v1.30 · Zero background required</div>
+  </div>
+  <div class="nav-section-label">Part I — Background</div>
+  <a href="#ch1">1. Why ISPC Exists</a>
+  <a href="#ch2">2. What SIMD Is</a>
+  <a href="#ch3">3. The SPMD Model</a>
+  <div class="nav-section-label">Part II — Getting Started</div>
+  <a href="#ch4">4. Installation</a>
+  <a href="#ch5">5. First Program</a>
+  <a href="#ch6">6. Compilation</a>
+  <div class="nav-section-label">Part III — Execution Model</div>
+  <a href="#ch7">7. Gangs &amp; Instances</a>
+  <a href="#ch8">8. Uniform vs Varying</a>
+  <a href="#ch9">9. The Execution Mask</a>
+  <a href="#ch10">10. Control Flow</a>
+  <div class="nav-section-label">Part IV — Memory</div>
+  <a href="#ch11">11. How Memory Loads Work</a>
+  <a href="#ch12">12. Gather &amp; Scatter</a>
+  <a href="#ch13">13. AOS vs SOA</a>
+  <a href="#ch14">14. Alignment</a>
+  <div class="nav-section-label">Part V — Language</div>
+  <a href="#ch15">15. Types in Depth</a>
+  <a href="#ch16">16. foreach &amp; Iteration</a>
+  <a href="#ch17">17. Functions</a>
+  <a href="#ch18">18. Task Parallelism</a>
+  <div class="nav-section-label">Part VI — Standard Library</div>
+  <a href="#ch19">19. Math Functions</a>
+  <a href="#ch20">20. Reductions</a>
+  <a href="#ch21">21. Cross-Lane Operations</a>
+  <a href="#ch22">22. Atomics</a>
+  <div class="nav-section-label">Part VII — Advanced</div>
+  <a href="#ch23">23. C/C++ Interop</a>
+  <a href="#ch24">24. Multi-Target Dispatch</a>
+  <a href="#ch25">25. Templates</a>
+  <a href="#ch26">26. Performance Guide</a>
+  <a href="#ch27">27. New in v1.28–1.30</a>
+  <a href="#ch28">28. Full Example</a>
+</nav>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Complete Reference · ISPC 1.30 · Zero Background Assumed</div>
+  <h1>Intel® <em>ISPC</em> Programming<br>From Scratch to Advanced</h1>
+  <p class="hero-desc">This guide explains not just what to write, but <em>why</em> it works — what happens inside the CPU, why certain patterns are fast or slow, and how every ISPC concept maps to real hardware. No prior knowledge of SIMD, vectorization, or parallel programming is assumed.</p>
+  <div class="hero-tags">
+    <span>ISPC v1.30</span><span>AVX2 / AVX-512</span><span>ARM NEON</span><span>Intel Xe GPU</span><span>LLVM backend</span>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 1 — WHY ISPC EXISTS
+════════════════════════════════════════════════════ -->
+<section id="ch1">
+<h2><span class="ch">01</span> Why ISPC Exists — The Problem It Solves</h2>
+
+<p>Modern CPUs are surprisingly capable of doing the same arithmetic operation on many pieces of data at once — not by running multiple threads, but by a feature built into the very arithmetic units themselves. This feature is called <strong>SIMD</strong> (Single Instruction, Multiple Data). But reaching that capability from regular C or C++ has historically been a nightmare. ISPC exists to fix that.</p>
+
+<h3>The problem with regular C</h3>
+
+<p>Imagine you want to multiply a million floats by 2. In C you write:</p>
+
+<pre><span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">0</span>; i &lt; N; i++) {
+    output[i] = input[i] * <span class="nu">2.0f</span>;
+}<span class="lang-tag">C</span></pre>
+
+<p>This looks perfectly fine. But it runs <em>one multiplication per clock cycle</em>. Your CPU, if it supports AVX2, could have done <em>eight</em> multiplications per clock cycle instead — all for the same energy and roughly the same time. You're leaving 7 out of 8 operations on the table, every single iteration.</p>
+
+<p>The compiler might auto-vectorize this loop (turn it into SIMD automatically), but auto-vectorization is notoriously fragile. Add a pointer that might alias, a branch inside the loop, an indirect array access, or a function call, and the compiler gives up and falls back to scalar code — silently, with no warning.</p>
+
+<h3>The problem with intrinsics</h3>
+
+<p>The "professional" way to use SIMD is via <strong>intrinsics</strong> — special C functions that map directly to SIMD assembly instructions. Here is the same multiply-by-two, written with AVX2 intrinsics:</p>
+
+<pre><span class="pp">#include</span> <span class="st">&lt;immintrin.h&gt;</span>
+
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">0</span>; i &lt; N; i += <span class="nu">8</span>) {
+    __m256 chunk = _mm256_loadu_ps(&amp;input[i]);        <span class="cm">// load 8 floats</span>
+    __m256 two   = _mm256_set1_ps(<span class="nu">2.0f</span>);             <span class="cm">// broadcast 2.0 to all 8 lanes</span>
+    __m256 result = _mm256_mul_ps(chunk, two);         <span class="cm">// 8 multiplies at once</span>
+    _mm256_storeu_ps(&amp;output[i], result);              <span class="cm">// store 8 results</span>
+}<span class="lang-tag">C</span></pre>
+
+<p>This is completely unreadable. You've replaced the obvious intent (multiply by 2) with loads of cryptic function names. If you want to add a branch, you now need to understand mask registers and blend instructions. If you want to target AVX-512 instead of AVX2, you rewrite everything. And there are over a thousand intrinsics to learn.</p>
+
+<h3>What ISPC gives you</h3>
+
+<p>ISPC lets you write something that looks almost exactly like the original scalar C — and compiles it into SIMD code that's as good as, or better than, handwritten intrinsics:</p>
+
+<pre><span class="kw">export</span> <span class="ty">void</span> <span class="fn">double_array</span>(<span class="kw">uniform</span> <span class="ty">float</span> input[], <span class="kw">uniform</span> <span class="ty">float</span> output[], <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        output[i] = input[i] * <span class="nu">2.0f</span>;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<p>That's it. One new keyword (<code>foreach</code>), and two qualifiers you'll learn shortly (<code>export</code> and <code>uniform</code>). The compiler handles the rest — loading 8 floats at once, doing 8 multiplications, storing 8 results, handling the tail if N isn't divisible by 8, and adapting to whatever SIMD width your target CPU supports.</p>
+
+<div class="box box-tip">
+  <span class="box-title">💡 The Core Promise of ISPC</span>
+  <p>You write code that looks like it operates on one element at a time. ISPC compiles it so that it actually runs on 4, 8, or 16 elements simultaneously — transparently.</p>
+</div>
+
+<p>The speedup is real and large. On a CPU with 8-wide AVX2, you get roughly 5–6× faster code compared to scalar C for compute-bound loops. On AVX-512 with 16-wide vectors, you can approach 10–12×. These aren't theoretical — they are consistently achieved in production code at Intel, Pixar, DreamWorks, and game studios worldwide.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 2 — WHAT SIMD IS
+════════════════════════════════════════════════════ -->
+<section id="ch2">
+<h2><span class="ch">02</span> What SIMD Is — Inside the CPU</h2>
+
+<p>To understand ISPC deeply, you need to understand what's actually happening in the CPU's arithmetic units. This is the foundation that explains why certain ISPC patterns are fast and others are slow.</p>
+
+<h3>Scalar arithmetic: one operation at a time</h3>
+
+<p>In a normal scalar CPU, when you write <code>a + b</code> for two floats, the CPU loads <code>a</code> into a 32-bit register, loads <code>b</code> into another 32-bit register, runs the addition, and stores the result. One instruction, one result.</p>
+
+<h3>SIMD registers: wide containers for multiple values</h3>
+
+<p>SIMD CPUs have special wide registers. An AVX2 CPU, for example, has 256-bit registers (named <code>ymm0</code> through <code>ymm15</code>). You can think of each register as a container that holds eight 32-bit floats side by side:</p>
+
+<div class="diagram">  Normal 32-bit float register (xmm0):
+  ┌──────────────────────────────────┐
+  │           3.14159…               │  → holds 1 float
+  └──────────────────────────────────┘
+                   32 bits
+
+  AVX2 256-bit register (ymm0):
+  ┌────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┐
+  │  1.0   │  2.0   │  3.0   │  4.0   │  5.0   │  6.0   │  7.0   │  8.0   │
+  └────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┘
+  lane: 0       1       2       3       4       5       6       7
+                              256 bits = 8 × 32-bit floats</div>
+
+<p>Each of the 8 slots is called a <strong>lane</strong>. Now here's the key insight: when you execute one SIMD add instruction on two such registers, you get <em>eight additions for the price of one instruction</em>:</p>
+
+<div class="diagram">  ymm0: │  1.0   │  2.0   │  3.0   │  4.0   │  5.0   │  6.0   │  7.0   │  8.0   │
+      +
+  ymm1: │  0.5   │  0.5   │  0.5   │  0.5   │  0.5   │  0.5   │  0.5   │  0.5   │
+      =
+  ymm2: │  1.5   │  2.5   │  3.5   │  4.5   │  5.5   │  6.5   │  7.5   │  8.5   │
+  
+  1 instruction → 8 additions. All happen in parallel, in the same clock cycle.</div>
+
+<h3>Different CPUs, different widths</h3>
+
+<p>Not all CPUs have the same width. This is crucial because ISPC has to target whatever hardware is available:</p>
+
+<table>
+  <tr><th>ISA</th><th>Register width</th><th>Floats per register</th><th>Available on</th></tr>
+  <tr><td>SSE4</td><td>128 bits</td><td>4 floats</td><td>Any x86 from ~2007+</td></tr>
+  <tr><td>AVX / AVX2</td><td>256 bits</td><td>8 floats</td><td>Intel Haswell+ (2013+), AMD Zen+</td></tr>
+  <tr><td>AVX-512</td><td>512 bits</td><td>16 floats</td><td>Skylake-X, Ice Lake, Zen 4+</td></tr>
+  <tr><td>ARM NEON</td><td>128 bits</td><td>4 floats</td><td>All ARM Cortex-A / Apple Silicon</td></tr>
+</table>
+
+<p>ISPC abstracts over this width. When you write <code>foreach</code>, it generates the right instructions for whichever target you compile for. The same source file works on SSE4, AVX2, and AVX-512.</p>
+
+<div class="box box-analogy">
+  <span class="box-title">🧠 Analogy</span>
+  <p>Think of SIMD like a cashier with a multi-item barcode scanner vs. a regular single-item scanner. The multi-item scanner (SIMD) can scan 8 items in the same time it takes the regular scanner to scan 1. The cashier (CPU core) does the same physical action — but processes far more items per second. ISPC is the system that decides how to pack items onto the scanner optimally.</p>
+</div>
+
+<h3>Why compilers struggle with auto-vectorization</h3>
+
+<p>Compilers try to auto-vectorize, but they must be <em>conservative</em>. They can only vectorize when they can <em>prove</em> it's safe. Common blockers:</p>
+
+<ul>
+  <li><strong>Pointer aliasing</strong> — if two pointers might point to overlapping memory, the compiler can't reorder or batch reads and writes</li>
+  <li><strong>Data-dependent branches</strong> — if the loop body has an <code>if</code> that depends on the data, the compiler often gives up</li>
+  <li><strong>Function calls</strong> — opaque functions break vectorization unless the compiler can inline them</li>
+  <li><strong>Indirect accesses</strong> — reading from <code>a[b[i]]</code> (a random location per element) requires special gather instructions the compiler rarely emits</li>
+</ul>
+
+<p>ISPC sidesteps this by using a programming model where the vectorization is <em>explicit in the language semantics</em>, not inferred from scalar code.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 3 — SPMD MODEL
+════════════════════════════════════════════════════ -->
+<section id="ch3">
+<h2><span class="ch">03</span> The SPMD Programming Model</h2>
+
+<p>ISPC is built on a programming model called <strong>SPMD</strong> — Single Program, Multiple Data. It's the same model used by GPU shaders (GLSL, HLSL), CUDA, and OpenCL. Understanding it is the mental key to everything in ISPC.</p>
+
+<h3>What SPMD means in plain English</h3>
+
+<p>You write one program. It looks like it's doing one thing. But behind the scenes, the hardware runs <em>multiple copies of that program simultaneously</em>, each working on different data.</p>
+
+<p>Think of it like a restaurant kitchen. You give the same recipe (the program) to four cooks (the program instances). Each cook follows the same steps, but they're working on different plates of food (the data). They all do the same operations, in the same order — just on different ingredients.</p>
+
+<p>This is fundamentally different from multi-threading, where different threads might run completely different code at the same time.</p>
+
+<h3>How this maps to SIMD hardware</h3>
+
+<p>ISPC maps each "copy" of your program (called a <strong>program instance</strong>) to one lane of a SIMD register. If you compile for AVX2 (8-wide), your program runs as 8 simultaneous instances, each in its own lane:</p>
+
+<div class="diagram">  You write:                      ISPC runs it as:
+  
+  float v = data[i];          →   lane0: v = data[0]
+  float result = v * 2.0f;        lane1: v = data[1]   ← all happen simultaneously
+  output[i] = result;             lane2: v = data[2]   in one SIMD instruction
+                                  lane3: v = data[3]
+                                  lane4: v = data[4]
+                                  lane5: v = data[5]
+                                  lane6: v = data[6]
+                                  lane7: v = data[7]</div>
+
+<p>Each program instance has a different value of <code>i</code> (its position in the data), so <code>data[i]</code> reads from different memory locations. But the <em>multiplication</em> operation is the same for all of them — so the CPU does all 8 multiplications with one instruction.</p>
+
+<h3>The key insight: you think scalar, the CPU runs SIMD</h3>
+
+<p>You don't write "multiply these 8 floats." You write "multiply this float." ISPC figures out how to run 8 copies of your scalar-looking program as actual SIMD instructions. This is the "Implicit" in "Intel Implicit SPMD Program Compiler."</p>
+
+<p>Compare to explicit SIMD (intrinsics), where you write the 8-at-a-time version directly. Or auto-vectorization, where the compiler tries to infer it. SPMD is the middle ground: you declare the parallelism implicitly through the language model, and the compiler makes it concrete.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 4 — INSTALLATION
+════════════════════════════════════════════════════ -->
+<section id="ch4">
+<h2><span class="ch">04</span> Installation</h2>
+
+<h3>Linux</h3>
+<pre><span class="cm"># Snap (always gets the latest release automatically)</span>
+sudo snap install ispc
+
+<span class="cm"># Ubuntu / Debian apt</span>
+sudo apt install ispc   <span class="cm"># may be an older version</span>
+
+<span class="cm"># Manual install from GitHub (always up-to-date)</span>
+wget https://github.com/ispc/ispc/releases/latest/download/ispc-v1.30.0-linux.tar.gz
+tar xzf ispc-v1.30.0-linux.tar.gz
+<span class="kw">export</span> PATH=<span class="st">"$PWD/ispc-v1.30.0-linux/bin:$PATH"</span><span class="lang-tag">bash</span></pre>
+
+<h3>macOS</h3>
+<pre>brew install ispc<span class="lang-tag">bash</span></pre>
+
+<h3>Windows</h3>
+<pre><span class="cm"># winget</span>
+winget install Intel.ISPC
+
+<span class="cm"># Or download the zip from GitHub releases, extract, add bin/ to PATH</span>
+<span class="cm"># Also install Visual C++ Redistributable (required for the runtime)</span><span class="lang-tag">powershell</span></pre>
+
+<h3>Verify the installation</h3>
+<pre>ispc --version
+<span class="cm"># Should print: Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), 1.30.0 ...</span>
+
+ispc --help       <span class="cm"># lists all flags</span>
+ispc --help-dev   <span class="cm"># more internal/debug flags</span><span class="lang-tag">bash</span></pre>
+
+<p>You'll also need a C++ compiler (GCC, Clang, or MSVC) to compile the C++ host code that calls your ISPC kernels.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 5 — FIRST PROGRAM
+════════════════════════════════════════════════════ -->
+<section id="ch5">
+<h2><span class="ch">05</span> Your First ISPC Program — Explained Line by Line</h2>
+
+<p>Let's build a complete, working ISPC program from scratch and understand exactly what every piece does and why it's needed.</p>
+
+<h3>The problem we're solving</h3>
+
+<p>We want to compute the square root of a million numbers as fast as possible. Scalar C would do this with a loop. ISPC will do 8 square roots per instruction (on AVX2).</p>
+
+<h4>The ISPC kernel — sqrt_kernel.ispc</h4>
+<pre><span class="cm">// This is the ISPC kernel file. It compiles separately from your C++ code.</span>
+
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">fast_sqrt</span>(
+        <span class="kw">uniform</span> <span class="ty">float</span> input[],    <span class="cm">// pointer to input array (shared by all instances)</span>
+        <span class="kw">uniform</span> <span class="ty">float</span> output[],   <span class="cm">// pointer to output array</span>
+        <span class="kw">uniform</span> <span class="ty">int</span>   count) {    <span class="cm">// how many elements to process</span>
+
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... count) {
+        output[i] = <span class="fn">sqrt</span>(input[i]);
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<p>Let's go through each new thing:</p>
+
+<div class="callout">
+  <div class="callout-num">1</div>
+  <div><strong><code>export</code></strong> — This makes the function callable from C or C++. Without it, the function is internal to ISPC and can't be called from outside. Think of it like declaring a public API. Every function that C++ will call must be <code>export</code>ed.</div>
+</div>
+
+<div class="callout">
+  <div class="callout-num">2</div>
+  <div><strong><code>uniform float input[]</code></strong> — The word <code>uniform</code> means this value is the same across all program instances. The pointer itself doesn't change — all 8 instances (lanes) share the same pointer. It's still an array; each instance will read from a different <em>offset</em> within that array. We'll explain <code>uniform</code> vs <code>varying</code> in detail in Chapter 8.</div>
+</div>
+
+<div class="callout">
+  <div class="callout-num">3</div>
+  <div><strong><code>foreach (i = 0 ... count)</code></strong> — This is ISPC's main parallel loop construct. It distributes the range <code>0</code> to <code>count-1</code> across the program instances automatically. On an 8-wide target, the first "iteration" processes elements 0–7 simultaneously, the next processes 8–15, and so on. If <code>count</code> isn't a multiple of 8, ISPC handles the leftover tail automatically.</div>
+</div>
+
+<div class="callout">
+  <div class="callout-num">4</div>
+  <div><strong><code>sqrt(input[i])</code></strong> — Inside a <code>foreach</code>, each instance has a different value of <code>i</code>. So <code>input[i]</code> reads from a different element per instance. The ISPC <code>sqrt</code> function compiles to a SIMD square root instruction — all 8 square roots happen in one instruction.</div>
+</div>
+
+<h4>The C++ host code — main.cpp</h4>
+<pre><span class="pp">#include</span> <span class="st">&lt;cstdlib&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;cstdio&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;cmath&gt;</span>
+<span class="pp">#include</span> <span class="st">"sqrt_kernel_ispc.h"</span>  <span class="cm">// auto-generated by ISPC, declares fast_sqrt</span>
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="kw">const int</span> N = <span class="nu">1024</span> * <span class="nu">1024</span>;  <span class="cm">// 1 million elements</span>
+
+    <span class="cm">// Allocate 64-byte aligned memory (important for SIMD performance)</span>
+    <span class="ty">float</span>* input  = (<span class="ty">float</span>*)<span class="fn">aligned_alloc</span>(<span class="nu">64</span>, N * <span class="kw">sizeof</span>(<span class="ty">float</span>));
+    <span class="ty">float</span>* output = (<span class="ty">float</span>*)<span class="fn">aligned_alloc</span>(<span class="nu">64</span>, N * <span class="kw">sizeof</span>(<span class="ty">float</span>));
+
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; N; i++) input[i] = (<span class="ty">float</span>)i;
+
+    <span class="cm">// Call the ISPC kernel — this runs SIMD code under the hood</span>
+    ispc::<span class="fn">fast_sqrt</span>(input, output, N);
+
+    <span class="cm">// Verify a few results</span>
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; <span class="nu">5</span>; i++)
+        <span class="fn">printf</span>(<span class="st">"sqrt(%d) = %f\n"</span>, i, output[i]);
+
+    <span class="fn">free</span>(input); <span class="fn">free</span>(output);
+}<span class="lang-tag">C++</span></pre>
+
+<p>The call <code>ispc::fast_sqrt(input, output, N)</code> looks completely normal. The ISPC namespace is added automatically by the generated header. Inside, the function is running 8-wide SIMD instructions. From C++'s perspective, it's just a function call.</p>
+
+<h3>What the generated header looks like</h3>
+
+<p>When you compile with <code>-h sqrt_kernel_ispc.h</code>, ISPC generates this header for you:</p>
+
+<pre><span class="pp">#pragma once</span>
+<span class="pp">#include</span> <span class="st">&lt;stdint.h&gt;</span>
+
+<span class="kw">namespace</span> ispc {
+    <span class="kw">extern</span> <span class="st">"C"</span> {
+        <span class="cm">// ISPC 'uniform float' maps to C 'float'</span>
+        <span class="cm">// ISPC 'uniform int' maps to C 'int32_t'</span>
+        <span class="ty">void</span> <span class="fn">fast_sqrt</span>(<span class="ty">float</span>* input, <span class="ty">float</span>* output, <span class="ty">int32_t</span> count);
+    }
+}<span class="lang-tag">C++</span></pre>
+
+<p>This is how the type mapping works: ISPC <code>uniform</code> types map directly to their C equivalents. The <code>varying</code> types (which we'll learn later) are SIMD registers and can't be passed across the C boundary directly.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 6 — COMPILATION
+════════════════════════════════════════════════════ -->
+<section id="ch6">
+<h2><span class="ch">06</span> Compilation — The Build Process</h2>
+
+<p>Unlike C++ where one compiler handles everything, ISPC uses a two-step process: first compile the ISPC kernel, then link it with your C++ code.</p>
+
+<h3>Step 1: Compile the ISPC kernel</h3>
+<pre><span class="cm"># Basic compilation</span>
+ispc sqrt_kernel.ispc \
+    -o sqrt_kernel.o \          <span class="cm"># output object file (linked later)</span>
+    -h sqrt_kernel_ispc.h \     <span class="cm"># output C++ header (included by main.cpp)</span>
+    --target=avx2-i32x8 \       <span class="cm"># compile for 8-wide AVX2</span>
+    -O2                         <span class="cm"># optimization level (same as GCC)</span><span class="lang-tag">bash</span></pre>
+
+<h3>Step 2: Compile the C++ host and link</h3>
+<pre><span class="cm"># Compile C++ host code</span>
+g++ -O2 -c main.cpp -o main.o
+
+<span class="cm"># Link everything together</span>
+g++ main.o sqrt_kernel.o -o my_program -lpthread
+
+<span class="cm"># Run</span>
+./my_program<span class="lang-tag">bash</span></pre>
+
+<p>The <code>-lpthread</code> is needed because ISPC's task system (for multi-core parallelism) uses pthreads internally. Even if you're not using tasks, link it to avoid missing symbol errors.</p>
+
+<h3>What the --target flag does</h3>
+
+<p>The target tells ISPC two things: which instruction set to use, and how many program instances (gang width) to run simultaneously. The format is <code>&lt;isa&gt;-&lt;element-type&gt;x&lt;width&gt;</code>:</p>
+
+<pre><span class="cm"># Common targets</span>
+--target=sse4-i32x4       <span class="cm"># SSE4.1, 4 int32 lanes → 4-wide gang</span>
+--target=avx2-i32x8       <span class="cm"># AVX2, 8 int32 lanes → 8-wide gang</span>
+--target=avx2-i32x16      <span class="cm"># AVX2, double-pumped → 16-wide gang</span>
+--target=avx512skx-x16    <span class="cm"># AVX-512 Skylake-X, 16 lanes</span>
+--target=neon-i32x4       <span class="cm"># ARM NEON, 4 lanes</span>
+
+<span class="cm"># Auto-detect best on current machine</span>
+--target=host             <span class="cm"># use whatever the host CPU supports</span><span class="lang-tag">bash</span></pre>
+
+<h3>CMake integration</h3>
+
+<p>For real projects, you don't want to type these commands manually. ISPC ships CMake helpers:</p>
+
+<pre><span class="cm"># CMakeLists.txt</span>
+<span class="fn">cmake_minimum_required</span>(VERSION <span class="nu">3.14</span>)
+<span class="fn">project</span>(MyISPCProject)
+
+<span class="fn">find_package</span>(ispc REQUIRED)
+
+<span class="cm"># This compiles the .ispc file and adds it as a library</span>
+<span class="fn">add_ispc_library</span>(sqrt_lib sqrt_kernel.ispc
+    TARGET avx2-i32x8      <span class="cm"># SIMD target</span>
+    HEADER sqrt_ispc.h     <span class="cm"># generated header</span>
+)
+
+<span class="fn">add_executable</span>(my_program main.cpp)
+<span class="fn">target_link_libraries</span>(my_program sqrt_lib)<span class="lang-tag">cmake</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 7 — GANGS AND INSTANCES
+════════════════════════════════════════════════════ -->
+<section id="ch7">
+<h2><span class="ch">07</span> Gangs, Program Instances, and programIndex</h2>
+
+<p>Now let's go deeper into the execution model. These concepts are the foundation for understanding everything else in ISPC.</p>
+
+<h3>The gang: a group of program instances running together</h3>
+
+<p>When your C++ code calls an ISPC <code>export</code> function, ISPC doesn't run your code once — it runs a <strong>gang</strong> of program instances. Each instance executes the same instructions, but on different data. The number of instances in a gang is called the <strong>gang width</strong>, and it equals the SIMD width of your target.</p>
+
+<p>On AVX2 (8-wide), a gang contains 8 program instances. They all start at the beginning of your function at the same time and run together — like a group of soldiers doing the same drill in formation.</p>
+
+<h3>programIndex: each instance knows its lane number</h3>
+
+<p>Each program instance has a built-in read-only variable called <code>programIndex</code>. It's different in each lane — lane 0 has <code>programIndex == 0</code>, lane 1 has <code>programIndex == 1</code>, and so on up to <code>programCount - 1</code>.</p>
+
+<p>This is what lets each instance work on different data:</p>
+
+<pre><span class="kw">export</span> <span class="ty">void</span> <span class="fn">show_lanes</span>(<span class="kw">uniform</span> <span class="ty">float</span> output[]) {
+    <span class="cm">// programIndex is different for every lane</span>
+    <span class="cm">// This runs ONE gang, so it writes programCount values</span>
+    output[<span class="bi">programIndex</span>] = (<span class="ty">float</span>)<span class="bi">programIndex</span>;
+}
+<span class="cm">// On AVX2 (8-wide): output = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]</span><span class="lang-tag">ispc</span></pre>
+
+<p><code>programCount</code> is also a built-in — it's a <em>compile-time constant</em> equal to the gang width. On AVX2-i32x8, it's always 8.</p>
+
+<h3>How foreach uses this internally</h3>
+
+<p>The <code>foreach</code> loop is really a shorthand for a pattern using <code>programIndex</code> and <code>programCount</code>. This is what happens "under the hood":</p>
+
+<pre><span class="cm">// What you write:</span>
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... <span class="nu">1000</span>) {
+    output[i] = input[i] * <span class="nu">2.0f</span>;
+}
+
+<span class="cm">// What ISPC conceptually does (simplified):</span>
+<span class="kw">for</span> (<span class="kw">uniform</span> <span class="ty">int</span> base = <span class="nu">0</span>; base &lt; <span class="nu">1000</span>; base += <span class="bi">programCount</span>) {
+    <span class="cm">// Each instance gets a different value of i</span>
+    <span class="ty">int</span> i = base + <span class="bi">programIndex</span>;   <span class="cm">// varying: different per lane</span>
+    <span class="kw">if</span> (i &lt; <span class="nu">1000</span>) {               <span class="cm">// handle tail (if 1000 not divisible by 8)</span>
+        output[i] = input[i] * <span class="nu">2.0f</span>;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<p>In the first "iteration" of the outer loop: base=0, so i is [0,1,2,3,4,5,6,7] across the 8 lanes. All 8 loads, multiplies, and stores happen simultaneously. In the second "iteration": base=8, so i is [8,9,10,11,12,13,14,15]. And so on.</p>
+
+<div class="box box-info">
+  <span class="box-title">ℹ️ Always prefer foreach over manual loops</span>
+  <p>The manual version above has a bug risk (the tail handling is easy to get wrong) and may not optimize as well. Always use <code>foreach</code> for data-parallel loops. The manual version is shown here only to explain what <code>foreach</code> is doing.</p>
+</div>
+
+<h3>The "gang" crosses the whole function call</h3>
+
+<p>The gang doesn't just exist for one loop — it's alive for the entire duration of the ISPC function call. If your ISPC function calls a helper function, the gang carries through. Local variables are stored per-lane (each lane has its own copy of varying variables). This is why ISPC programs look serial but actually have hidden parallelism everywhere.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 8 — UNIFORM vs VARYING
+════════════════════════════════════════════════════ -->
+<section id="ch8">
+<h2><span class="ch">08</span> Uniform vs Varying — The Most Important Distinction</h2>
+
+<p>This is the single most impactful concept in ISPC. Getting it wrong is the most common source of bugs and performance problems. Let's build a complete mental model from scratch.</p>
+
+<h3>The core question: "Is this value the same across all lanes?"</h3>
+
+<p>Every value in ISPC is either:</p>
+<ul>
+  <li><strong>uniform</strong>: One copy exists, shared by all program instances (all lanes see the same value)</li>
+  <li><strong>varying</strong>: One copy per lane — each of the 8 instances has its own independent value</li>
+</ul>
+
+<p>The default in ISPC is <code>varying</code>. If you don't write a qualifier, the value is varying.</p>
+
+<h3>What they look like in hardware</h3>
+
+<div class="diagram">  uniform float u = 3.14f;
+  ┌──────────────────────────────────────────┐
+  │                 3.14                     │  → 1 scalar register or immediate
+  └──────────────────────────────────────────┘
+  All 8 lanes see the same 3.14.
+
+  varying float v;    (each lane has a different value)
+  ┌───────┬───────┬───────┬───────┬───────┬───────┬───────┬───────┐
+  │  1.0  │  2.5  │ -0.3  │  7.1  │  0.0  │  4.4  │  9.9  │  3.3  │
+  └───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┘
+  lane:   0       1       2       3       4       5       6       7
+  → 1 SIMD register (ymm0 on AVX2) holds all 8 values at once</div>
+
+<h3>A concrete example that shows why this matters</h3>
+
+<pre><span class="kw">export</span> <span class="ty">void</span> <span class="fn">scale_array</span>(<span class="kw">uniform</span> <span class="ty">float</span> data[],    <span class="cm">// pointer = same for all lanes</span>
+                          <span class="kw">uniform</span> <span class="ty">int</span>   count,     <span class="cm">// length = same for all lanes</span>
+                          <span class="kw">uniform</span> <span class="ty">float</span> factor) {  <span class="cm">// scale = same for all lanes</span>
+
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... count) {
+        <span class="cm">// 'i' here is varying: lane0 has i=0, lane1 has i=1, etc.</span>
+        <span class="cm">// 'data[i]' is varying: each lane reads from a different address</span>
+        <span class="ty">float</span> val = data[i];  <span class="cm">// 'val' is varying (different per lane)</span>
+
+        <span class="cm">// 'factor' is uniform: one value, broadcast to all 8 lanes</span>
+        <span class="cm">// 'val * factor' = SIMD multiply: ymm_val * broadcast(factor)</span>
+        data[i] = val * factor;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<p>Here, <code>factor</code> is uniform because it's a scale factor — the same number applies to every element. The CPU has one copy of it and broadcasts it across the SIMD multiply. <code>val</code> is varying because each lane is processing a different array element.</p>
+
+<h3>Why uniform matters for performance</h3>
+
+<p>Operations on <code>uniform</code> values use <em>scalar</em> instructions. Operations on <code>varying</code> values use <em>SIMD</em> instructions. The issue is not just instruction count — it's that certain things are much cheaper (or only possible) with uniform values:</p>
+
+<table>
+  <tr><th>Operation</th><th>If condition is uniform</th><th>If condition is varying</th></tr>
+  <tr>
+    <td><code>if (cond) { ... }</code></td>
+    <td>A simple branch — one instruction. Only one path executes.</td>
+    <td>Both the true and false branches may run, with masking. Twice the work.</td>
+  </tr>
+  <tr>
+    <td>Loop bound <code>while (cond)</code></td>
+    <td>Loop exits as soon as the scalar condition is false. Normal loop.</td>
+    <td>Loop continues until ALL lanes are false. Extra iterations for slow lanes.</td>
+  </tr>
+  <tr>
+    <td>Function call target</td>
+    <td>One function call.</td>
+    <td>Up to 8 different function calls (one per lane), serialized.</td>
+  </tr>
+  <tr>
+    <td>Array index</td>
+    <td>One load + broadcast. Fast.</td>
+    <td>8 independent loads (a gather). Slow — see Chapter 12.</td>
+  </tr>
+</table>
+
+<h3>The rules for uniform vs varying</h3>
+
+<p><strong>Rule 1:</strong> Parameters from C++ are always <code>uniform</code>. C++ doesn't know about lanes — it hands you one value, which is the same for all lanes.</p>
+
+<p><strong>Rule 2:</strong> Inside <code>foreach</code>, the loop variable <code>i</code> is automatically <code>varying</code> — that's the whole point; each lane gets a different <code>i</code>.</p>
+
+<p><strong>Rule 3:</strong> Any arithmetic involving a <code>varying</code> value produces a <code>varying</code> result. It's "contagious" — once you mix a uniform and a varying, the result is varying.</p>
+
+<p><strong>Rule 4:</strong> You can convert <code>uniform → varying</code> implicitly (just broadcast). You cannot convert <code>varying → uniform</code> implicitly — you need an explicit reduction function like <code>reduce_add()</code>.</p>
+
+<pre><span class="kw">uniform</span> <span class="ty">float</span> u = <span class="nu">5.0f</span>;
+<span class="ty">float</span>          v = data[<span class="bi">programIndex</span>];  <span class="cm">// varying</span>
+
+<span class="ty">float</span> result1 = u + v;    <span class="cm">// OK: uniform + varying = varying (broadcast u first)</span>
+<span class="ty">float</span> result2 = v * v;    <span class="cm">// OK: varying * varying = varying</span>
+
+<span class="kw">uniform</span> <span class="ty">float</span> bad = v;    <span class="cm">// ERROR: can't put 8 different values into 1 uniform</span>
+
+<span class="kw">uniform</span> <span class="ty">float</span> total = <span class="fn">reduce_add</span>(v);  <span class="cm">// OK: sum all 8 lane values → one uniform</span><span class="lang-tag">ispc</span></pre>
+
+<h3>When to mark things uniform</h3>
+
+<p>The compiler will give you a warning if you use something varying where it expects uniform, so you won't silently get wrong results. But for performance, the rule is: <strong>mark something uniform whenever you know it's the same across all lanes</strong>. Common candidates:</p>
+
+<ul>
+  <li>Array lengths, counts, iteration limits</li>
+  <li>Scale factors, thresholds, configuration values</li>
+  <li>Pointers to data that is read (not indexed per-lane)</li>
+  <li>Any value computed from uniform inputs only</li>
+  <li>Loop counters in outer (non-<code>foreach</code>) loops</li>
+</ul>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 9 — THE EXECUTION MASK
+════════════════════════════════════════════════════ -->
+<section id="ch9">
+<h2><span class="ch">09</span> The Execution Mask — How Branching Works in SIMD</h2>
+
+<p>This is one of the trickiest parts of SIMD programming. When not all lanes should execute the same code (because of an <code>if</code> statement, for example), the CPU uses a <strong>mask</strong> to selectively apply results. ISPC manages this mask automatically, but understanding it explains many performance characteristics.</p>
+
+<h3>The problem: SIMD can't truly branch</h3>
+
+<p>In scalar code, an <code>if</code> statement causes the CPU to either execute the true branch or the false branch — never both. That's what a branch instruction does.</p>
+
+<p>In SIMD, you have 8 lanes running together. They can't physically take different branches — they share a single instruction pointer. So what happens when 4 lanes need the true branch and 4 need the false branch?</p>
+
+<p>The answer is: <strong>both branches run</strong>, but results from the "wrong" branch are thrown away using a <strong>mask</strong>.</p>
+
+<h3>What the mask looks like</h3>
+
+<p>The execution mask is a bitmask — one bit per lane. When a bit is 1, that lane is "active" (its results are written). When a bit is 0, that lane is "masked off" (its results are discarded, or it avoids certain operations like memory writes).</p>
+
+<div class="diagram">  int x = data[programIndex];   // x = [3, -1, 7, -2, 5, -4, 8, -6]
+
+  if (x > 0) {
+      // Which lanes is x > 0?  →  [1, 0, 1, 0, 1, 0, 1, 0]
+      //                                     ↑
+      //                             this is the execution mask
+      //                             1 = active, 0 = masked off
+
+      result[programIndex] = x * 2;
+      //  Only lanes 0, 2, 4, 6 write. Lanes 1, 3, 5, 7 are masked.
+      //  But all 8 lanes run the multiply instruction!
+      //  The masked lanes just don't commit their results.
+  }</div>
+
+<h3>Predication: how masked writes work</h3>
+
+<p>Modern SIMD instructions support <strong>predicated writes</strong> (masked stores). When a lane is masked off, the store instruction knows not to write that lane's result to memory. The arithmetic still runs, but the result is silently discarded. This is safe but not free — the CPU still spends time on the instruction even for masked lanes.</p>
+
+<h3>The "both branches run" consequence</h3>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> val = data[i];
+
+    <span class="kw">if</span> (val &gt; <span class="nu">0.0f</span>) {
+        <span class="cm">// Lanes where val > 0 are active here</span>
+        <span class="cm">// Lanes where val ≤ 0 are masked</span>
+        output[i] = <span class="fn">sqrt</span>(val);   <span class="cm">// SIMD sqrt runs for all 8 lanes</span>
+                                   <span class="cm">// but only active lanes write results</span>
+    } <span class="kw">else</span> {
+        <span class="cm">// Now the other lanes are active</span>
+        output[i] = <span class="nu">0.0f</span>;
+    }
+    <span class="cm">// After the if-else: all lanes are active again</span>
+}<span class="lang-tag">ispc</span></pre>
+
+<p>The consequence: if you have an expensive operation (like a transcendental function) inside an <code>if</code> that only applies to some lanes, it still runs for all lanes. The masked lanes just don't write their results. So divergent branches can be costly.</p>
+
+<h3>Gang convergence: ISPC's implicit guarantee</h3>
+
+<p>ISPC guarantees that all program instances in a gang will <em>converge</em> at the end of every structured control flow statement (end of <code>if</code>, end of loop body, etc.). This means:</p>
+
+<ul>
+  <li>You never have to worry about lanes getting "stuck" in a branch forever</li>
+  <li>After an <code>if-else</code>, all lanes are active again</li>
+  <li>This is called the <strong>implicit reconvergence</strong> guarantee, and it's what makes ISPC's model "implicit" SPMD</li>
+</ul>
+
+<div class="box box-warn">
+  <span class="box-title">⚠️ Performance Implication</span>
+  <p>Because both sides of a varying branch run with masking, the cost of a branch is roughly: <em>cost(true branch) + cost(false branch)</em> rather than <em>max(cost(true), cost(false))</em> as in scalar code. When both branches are expensive, consider restructuring your algorithm to reduce divergence.</p>
+</div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 10 — CONTROL FLOW
+════════════════════════════════════════════════════ -->
+<section id="ch10">
+<h2><span class="ch">10</span> Control Flow in Depth</h2>
+
+<h3>Regular if: works, but costs both branches</h3>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> v = data[i];
+    <span class="kw">if</span> (v &lt; <span class="nu">0.0f</span>) {    <span class="cm">// varying condition → masking</span>
+        v = -v;          <span class="cm">// negation runs for all lanes, masked writes</span>
+    }
+    output[i] = v;
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Coherent if (cif): checks the mask first</h3>
+
+<p>Sometimes you know that in practice, all lanes in a gang will almost always agree on a branch. For example, if you're processing particles and most of them are active vs. inactive, in most gangs either all 8 are active or all 8 are inactive (rarely 4 and 4). In that case, you can use <code>cif</code> (coherent if):</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> v = data[i];
+    <span class="kw">cif</span> (v &lt; <span class="nu">0.0f</span>) {    <span class="cm">// coherent if: checks if ALL lanes agree</span>
+        v = -v;           <span class="cm">// if all 8 lanes are negative: run unmasked (full speed)</span>
+                          <span class="cm">// if some lanes differ: falls back to masked execution</span>
+    }
+    output[i] = v;
+}<span class="lang-tag">ispc</span></pre>
+
+<p><code>cif</code> generates a runtime check: "are all active lanes going the same direction?" If yes, it skips the masking overhead entirely. If not, it falls back to the normal masked path. The overhead of the check is tiny (a few instructions to examine the mask register), so <code>cif</code> is almost always at least as fast as regular <code>if</code>, and often much faster.</p>
+
+<p>Similarly, <code>cfor</code>, <code>cwhile</code>, and <code>cdo</code> are coherent versions of loops. They check whether the loop condition is uniform across all lanes on each iteration.</p>
+
+<h3>foreach_active: serialize over lanes</h3>
+
+<p><code>foreach_active</code> is a special construct that runs its body once per <em>active lane</em>, but <em>serially</em> (one lane at a time). It "un-vectorizes" for a specific section of code. This is useful when you need to do something inherently serial — like inserting into a hash table — but only for the lanes where some condition is true.</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> val = data[i];
+
+    <span class="kw">if</span> (val &gt; threshold) {
+        <span class="cm">// Some lanes are active here. We want to add each active lane's</span>
+        <span class="cm">// value to a hash table — but that can't be done in parallel.</span>
+        <span class="kw">foreach_active</span> (lane) {
+            <span class="cm">// 'lane' is the index of the currently executing instance (uniform)</span>
+            <span class="cm">// This body runs once for lane 0, then lane 2, then lane 5, etc.</span>
+            <span class="cm">// (whichever are active in the outer if)</span>
+            <span class="cm">// Inside here, everything is UNIFORM — scalar code</span>
+            <span class="fn">hashtable_insert</span>(keys[lane], val);   <span class="cm">// val is now uniform (current lane's value)</span>
+        }
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<div class="box box-info">
+  <span class="box-title">ℹ️ When to use foreach_active</span>
+  <p>Use it when you have a data-dependent operation that can't be parallelized — like random writes to a shared data structure, hash table inserts, linked list manipulations. The key insight: even though the body runs serially, you've still gained efficiency because the outer <code>foreach</code> loaded and processed data 8-at-a-time; only the "special case" work is serialized.</p>
+</div>
+
+<h3>foreach_unique: de-duplicate varying values</h3>
+
+<p><code>foreach_unique</code> is a more specialized version. It iterates over all the <em>distinct</em> values of a varying variable, running the body once per unique value with all lanes sharing that value active:</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="cm">// Suppose each element belongs to one of a few buckets:</span>
+    <span class="ty">int</span> bucket = data[i] / bucket_size;  <span class="cm">// varying: lane0=2, lane1=2, lane2=5, lane3=2...</span>
+
+    <span class="cm">// Process all elements that share the same bucket value together</span>
+    <span class="kw">foreach_unique</span> (b in bucket) {
+        <span class="cm">// 'b' is uniform (the current unique bucket value being processed)</span>
+        <span class="cm">// All lanes where bucket==b are active</span>
+        <span class="cm">// This block runs once for b=2 (with lanes 0,1,3 active),</span>
+        <span class="cm">// then once for b=5 (with lane 2 active), etc.</span>
+        <span class="fn">update_bucket_stats</span>(b, ...);
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Loops with varying conditions</h3>
+
+<p>When a loop condition is varying, the loop continues until <em>all</em> active lanes are done — even if some lanes satisfied the exit condition many iterations ago:</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> z = start[i];   <span class="cm">// varying starting point per lane</span>
+
+    <span class="cm">// This loop keeps running until ALL lanes have z > threshold</span>
+    <span class="cm">// Lane 0 might finish in 3 iterations, lane 5 in 20 iterations</span>
+    <span class="cm">// The loop runs 20 times total — lanes that finished early just get masked</span>
+    <span class="kw">while</span> (z &lt; threshold) {
+        z = z * z + <span class="nu">0.1f</span>;
+    }
+
+    output[i] = z;
+}
+<span class="cm">// This is actually correct for Mandelbrot-like computations!</span>
+<span class="cm">// But if you know most lanes finish at similar times, cwhile is faster:</span>
+    <span class="kw">cwhile</span> (z &lt; threshold) {
+        z = z * z + <span class="nu">0.1f</span>;
+    }<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 11 — HOW MEMORY LOADS WORK
+════════════════════════════════════════════════════ -->
+<section id="ch11">
+<h2><span class="ch">11</span> How Memory Loads Work in SIMD</h2>
+
+<p>Memory access patterns have an enormous impact on SIMD performance — often more than the arithmetic itself. Understanding this is essential to writing fast ISPC code.</p>
+
+<h3>The ideal case: sequential (contiguous) access</h3>
+
+<p>The most efficient SIMD memory access is when all 8 lanes read from <em>consecutive</em> memory locations. This is called a <strong>sequential</strong> or <strong>contiguous</strong> load. The CPU can handle this with a single instruction that loads a whole cache line into a SIMD register.</p>
+
+<div class="diagram">  Memory: [1.0][2.0][3.0][4.0][5.0][6.0][7.0][8.0][9.0][10.0]...
+                                                  
+  Lane:    0     1     2     3     4     5     6     7
+  Reads:   ↑     ↑     ↑     ↑     ↑     ↑     ↑     ↑
+           └─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+                    1 instruction: vmovaps ymm0, [ptr]
+                    loads all 8 values at once. FAST.</div>
+
+<p>This is what happens when you access <code>data[i]</code> inside a <code>foreach</code> loop where <code>i</code> is a simple counter. Lane 0 reads <code>data[0]</code>, lane 1 reads <code>data[1]</code>, etc. — eight consecutive addresses, one load instruction.</p>
+
+<h3>What determines whether a load is sequential</h3>
+
+<p>The key is whether the addresses computed by each lane are consecutive. If they are, ISPC emits a fast vector load. The load type is determined by analyzing the address expression:</p>
+
+<ul>
+  <li><code>data[programIndex]</code> — lane 0 reads index 0, lane 1 reads index 1, ..., sequential ✅</li>
+  <li><code>data[i]</code> inside <code>foreach (i = 0 ... N)</code> — same thing, sequential ✅</li>
+  <li><code>data[i * 2]</code> — stride 2, lane 0 reads index 0, lane 1 reads index 2, ... strided (less efficient but sometimes vectorizable)</li>
+  <li><code>data[indices[programIndex]]</code> — each lane reads from a random location → <strong>gather</strong> ❌ (expensive)</li>
+</ul>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 12 — GATHER AND SCATTER
+════════════════════════════════════════════════════ -->
+<section id="ch12">
+<h2><span class="ch">12</span> Gather and Scatter — What They Are and Why They're Slow</h2>
+
+<p>Gather and scatter are the SIMD equivalents of reading from and writing to non-consecutive memory locations. They are the most important performance concept to understand in ISPC, and the most common source of unexpected slowdowns.</p>
+
+<h3>What is a gather?</h3>
+
+<p>A <strong>gather</strong> happens when each lane in a gang reads from a <em>different, non-consecutive</em> memory address. For example, if you have an array <code>data[]</code> and an array of indices <code>idx[]</code>, and you do <code>data[idx[i]]</code> inside a <code>foreach</code>, each lane is computing a different index into <code>data</code> — and those indices can be anywhere in memory.</p>
+
+<div class="diagram">  data: [0.1][0.2][0.3][0.4][0.5][0.6][0.7][0.8][0.9][1.0][1.1][1.2]
+         [0]  [1]  [2]  [3]  [4]  [5]  [6]  [7]  [8]  [9]  [10] [11]
+
+  idx (varying): [3, 8, 1, 10, 5, 0, 7, 11]  ← different per lane
+
+  Gather: each lane reads from its own arbitrary address:
+  lane 0 → data[3]  = 0.4
+  lane 1 → data[8]  = 0.9      ← these are scattered around in memory
+  lane 2 → data[1]  = 0.2      ← no cache locality, potential cache misses
+  lane 3 → data[10] = 1.1
+  lane 4 → data[5]  = 0.6
+  lane 5 → data[0]  = 0.1
+  lane 6 → data[7]  = 0.8
+  lane 7 → data[11] = 1.2
+
+  Result SIMD register: [0.4, 0.9, 0.2, 1.1, 0.6, 0.1, 0.8, 1.2]
+  Cost: potentially 8 separate cache misses. 4-10× slower than sequential.</div>
+
+<p>Hardware does have instructions for gathers (e.g., <code>vgatherdps</code> on AVX2) — these can do all 8 reads in one instruction — but they're still much slower than a single contiguous load because the data is scattered in memory, causing more cache misses.</p>
+
+<h3>What is a scatter?</h3>
+
+<p>A <strong>scatter</strong> is the write equivalent of a gather. It happens when each lane tries to write to a different, non-consecutive memory address. It has the same performance implications as a gather, plus it must be careful about lanes writing to the same address (a race condition).</p>
+
+<div class="diagram">  Writing to arbitrary locations (scatter):
+  
+  result[idx[programIndex]] = val;
+  
+  lane 0 writes val0 → result[3]
+  lane 1 writes val1 → result[8]    ← these stores are scattered
+  lane 2 writes val2 → result[1]
+  ...
+  
+  If two lanes write to the same index, the result is undefined!
+  This is a data race — ISPC does not protect against this.</div>
+
+<h3>How to recognize gather/scatter in your code</h3>
+
+<p>The rule is simple: if the <em>index</em> used to access an array is <code>varying</code> (different per lane), you get a gather (for reads) or scatter (for writes). If the index is <code>uniform</code> or a simple linear function of <code>programIndex</code>, you get a fast sequential or strided access.</p>
+
+<pre><span class="kw">uniform</span> <span class="ty">float</span> data[<span class="nu">1000</span>];
+<span class="kw">uniform</span> <span class="ty">int</span>   indices[<span class="nu">1000</span>];
+
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... <span class="nu">1000</span>) {
+    <span class="cm">// ✅ FAST: i is a sequential varying index → sequential (strided) load</span>
+    <span class="ty">float</span> v1 = data[i];
+
+    <span class="cm">// ❌ SLOW GATHER: indices[i] is varying with unpredictable values</span>
+    <span class="cm">// Each lane computes a different index, memory locations are random</span>
+    <span class="ty">float</span> v2 = data[indices[i]];
+
+    <span class="cm">// ❌ SLOW GATHER: programIndex is varying and data access is indirect</span>
+    <span class="ty">float</span> v3 = data[indices[<span class="bi">programIndex</span>]];
+
+    <span class="cm">// ✅ FAST: uniform index → all lanes read the same value (broadcast)</span>
+    <span class="kw">uniform</span> <span class="ty">int</span> j = <span class="nu">42</span>;
+    <span class="ty">float</span> v4 = data[j];   <span class="cm">// one load, broadcast to all 8 lanes</span>
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>ISPC will still compile code with gathers — it's not an error</h3>
+
+<p>ISPC silently generates gather/scatter instructions when your access patterns require them. You won't get an error or warning by default. This is by design — gathers are sometimes unavoidable. But they can be 4–10× slower than sequential accesses for large data. You can find them by looking at the assembly output (<code>--emit-asm</code>) and searching for <code>vgather</code> instructions.</p>
+
+<h3>How to avoid gathers</h3>
+
+<p>The primary strategy is to restructure your data so that elements accessed together in the same gang are also <em>contiguous in memory</em>. This leads us directly to the AOS vs SOA discussion in the next chapter.</p>
+
+<p>When you truly need random access, a gather is fine — just be aware of its cost and don't try to avoid it by hoisting it out of the loop if it's actually needed per-element.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 13 — AOS vs SOA
+════════════════════════════════════════════════════ -->
+<section id="ch13">
+<h2><span class="ch">13</span> Array of Structures vs Structure of Arrays</h2>
+
+<p>This is the most impactful data layout choice in SIMD programming. It determines whether your memory accesses are sequential (fast) or gathered (slow).</p>
+
+<h3>Array of Structures (AOS) — the natural C way</h3>
+
+<p>The way you'd naturally define a particle in C:</p>
+
+<pre><span class="kw">struct</span> Particle {
+    <span class="ty">float</span> x, y, z;     <span class="cm">// position</span>
+    <span class="ty">float</span> vx, vy, vz;  <span class="cm">// velocity</span>
+    <span class="ty">float</span> mass;
+};
+
+Particle particles[N];<span class="lang-tag">C</span></pre>
+
+<p>In memory, this looks like:</p>
+
+<div class="diagram">  Memory layout (AOS):
+  
+  [x0][y0][z0][vx0][vy0][vz0][m0] [x1][y1][z1][vx1][vy1][vz1][m1] [x2]...
+   ───────────── particle 0 ──────── ─────────── particle 1 ───────── ─────</div>
+
+<p>Now imagine you want to update all X positions. In a SIMD loop, you'd want to load x0, x1, x2, x3, x4, x5, x6, x7 (eight X values) into a SIMD register. But look at the memory layout: x0, x1, x2, x3... are not consecutive! Between x0 and x1, there are y0, z0, vx0, vy0, vz0, m0 — 6 other floats. So the addresses you need are: <code>ptr+0, ptr+7, ptr+14, ptr+21, ...</code> (stride 7). That's a gather!</p>
+
+<h3>Structure of Arrays (SOA) — the SIMD-friendly way</h3>
+
+<p>The SOA layout separates each field into its own array:</p>
+
+<pre><span class="kw">struct</span> Particles {   <span class="cm">// Note: singular struct, plural name</span>
+    <span class="ty">float</span> x[N];
+    <span class="ty">float</span> y[N];
+    <span class="ty">float</span> z[N];
+    <span class="ty">float</span> vx[N];
+    <span class="ty">float</span> vy[N];
+    <span class="ty">float</span> vz[N];
+    <span class="ty">float</span> mass[N];
+};
+
+Particles particles;<span class="lang-tag">C</span></pre>
+
+<p>In memory:</p>
+
+<div class="diagram">  Memory layout (SOA):
+  
+  [x0][x1][x2][x3][x4][x5][x6][x7][x8]...[xN]
+  [y0][y1][y2][y3][y4][y5][y6][y7][y8]...[yN]
+  [z0][z1][z2][z3]...
+  ...</div>
+
+<p>Now when you want to load 8 X values, they're at consecutive addresses: x0, x1, x2, x3, x4, x5, x6, x7 — perfect for a single SIMD vector load. Zero gathers needed.</p>
+
+<h3>ISPC's soa keyword: the best of both worlds</h3>
+
+<p>Writing SOA manually is tedious because you lose the natural <code>particle.x</code> syntax. ISPC's <code>soa&lt;N&gt;</code> qualifier lets you declare a struct that <em>looks</em> like AOS but is stored as SOA:</p>
+
+<pre><span class="cm">// Declare the struct as SOA with a tile size matching your gang width (8 for AVX2)</span>
+<span class="kw">soa</span>&lt;<span class="nu">8</span>&gt; <span class="kw">struct</span> Particle {
+    <span class="ty">float</span> x, y, z;
+    <span class="ty">float</span> vx, vy, vz;
+    <span class="ty">float</span> mass;
+};
+
+<span class="cm">// Memory layout with soa&lt;8&gt;:</span>
+<span class="cm">// [x0..x7][y0..y7][z0..z7][vx0..vx7]...[x8..x15][y8..y15]...</span>
+<span class="cm">// Grouped in tiles of 8</span>
+
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">integrate</span>(<span class="kw">uniform</span> <span class="kw">soa</span>&lt;<span class="nu">8</span>&gt; Particle particles[], <span class="kw">uniform</span> <span class="ty">int</span> N,
+                        <span class="kw">uniform</span> <span class="ty">float</span> dt) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        <span class="cm">// Despite looking like field access, these are sequential loads!</span>
+        <span class="cm">// particles[i].x loads x0,x1,...,x7 from consecutive addresses</span>
+        particles[i].x += particles[i].vx * dt;
+        particles[i].y += particles[i].vy * dt;
+        particles[i].z += particles[i].vz * dt;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>The tile size must match the gang width</h3>
+
+<p>The <code>8</code> in <code>soa&lt;8&gt;</code> is the tile size — how many elements are grouped together in SOA layout. For best results, this should match your <code>programCount</code>. If you compile for AVX2 (gang width 8), use <code>soa&lt;8&gt;</code>. For AVX-512 (gang width 16), use <code>soa&lt;16&gt;</code>.</p>
+
+<h3>AOS-to-SOA conversion at runtime</h3>
+
+<p>Sometimes your data comes from C++ in AOS format (because C++ code uses natural struct arrays). ISPC provides built-in functions to convert:</p>
+
+<pre><span class="cm">// You have AOS data: [x0,y0,z0,w0, x1,y1,z1,w1, x2,y2,z2,w2, ...]</span>
+<span class="cm">// You want SOA:      [x0..xN, y0..yN, z0..zN, w0..wN]</span>
+
+<span class="kw">uniform</span> <span class="ty">float</span> aos[N*<span class="nu">4</span>];  <span class="cm">// input: interleaved</span>
+<span class="kw">uniform</span> <span class="ty">float</span> soa_x[N], soa_y[N], soa_z[N], soa_w[N];  <span class="cm">// output: separated</span>
+
+<span class="cm">// Converts 4-component AOS to SOA</span>
+<span class="fn">aos_to_soa4</span>(aos, soa_x, soa_y, soa_z, soa_w, N);
+
+<span class="cm">// Process in SOA...</span>
+
+<span class="cm">// Convert back if needed</span>
+<span class="fn">soa_to_aos4</span>(soa_x, soa_y, soa_z, soa_w, aos, N);<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 14 — ALIGNMENT
+════════════════════════════════════════════════════ -->
+<section id="ch14">
+<h2><span class="ch">14</span> Data Alignment — Why It Matters</h2>
+
+<p>SIMD load instructions have alignment requirements. Understanding why alignment matters helps you avoid subtle performance bugs.</p>
+
+<h3>What alignment means</h3>
+
+<p>A value is "N-byte aligned" if its memory address is a multiple of N. For example, an array of 8 floats (32 bytes) is 32-byte aligned if it starts at an address like 0x100, 0x120, 0x140 — any multiple of 32. It's unaligned if it starts at 0x104 or 0x11A.</p>
+
+<p>SIMD vector loads are most efficient when the data starts at an address aligned to the vector width:</p>
+<ul>
+  <li>SSE4 (16 bytes): needs 16-byte alignment</li>
+  <li>AVX2 (32 bytes): needs 32-byte alignment for aligned load instructions</li>
+  <li>AVX-512 (64 bytes): needs 64-byte alignment for aligned loads</li>
+</ul>
+
+<p>Modern CPUs can handle unaligned loads, but they may be slower (especially when the data crosses a cache line boundary).</p>
+
+<h3>How to allocate aligned memory</h3>
+
+<pre><span class="cm">// C++ (C11 / POSIX)</span>
+<span class="ty">float</span>* data = (<span class="ty">float</span>*)<span class="fn">aligned_alloc</span>(<span class="nu">64</span>, N * <span class="kw">sizeof</span>(<span class="ty">float</span>));
+<span class="cm">// 64 = cache line size = also the AVX-512 alignment. Safe for all SIMD widths.</span>
+
+<span class="cm">// C++ standard (C++17)</span>
+<span class="ty">float</span>* data = <span class="kw">new</span> (<span class="fn">std::align_val_t</span>(<span class="nu">64</span>)) <span class="ty">float</span>[N];
+
+<span class="cm">// Don't forget to use the matching free:</span>
+<span class="fn">free</span>(data);      <span class="cm">// for aligned_alloc</span>
+<span class="kw">operator delete</span>[] (data, <span class="fn">std::align_val_t</span>(<span class="nu">64</span>));  <span class="cm">// for aligned new</span><span class="lang-tag">C++</span></pre>
+
+<h3>Telling ISPC about alignment</h3>
+
+<pre><span class="cm">// In ISPC, declare aligned local arrays with __attribute__</span>
+<span class="kw">uniform</span> <span class="ty">float</span> __attribute__((aligned(<span class="nu">64</span>))) scratch[<span class="nu">64</span>];
+
+<span class="cm">// Or use the aligned attribute (v1.27+)</span>
+__attribute__((aligned(<span class="nu">64</span>))) <span class="kw">uniform</span> <span class="ty">float</span> buf[<span class="nu">64</span>];<span class="lang-tag">ispc</span></pre>
+
+<div class="box box-tip">
+  <span class="box-title">💡 Practical Advice</span>
+  <p>Always allocate ISPC-processed data with 64-byte alignment (one cache line). This works for all targets from SSE4 to AVX-512, ensures no cache-line splits, and costs nothing in practice since malloc already aligns to 16 bytes — you're just being more careful about larger SIMD widths.</p>
+</div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 15 — TYPES IN DEPTH
+════════════════════════════════════════════════════ -->
+<section id="ch15">
+<h2><span class="ch">15</span> Types in Depth</h2>
+
+<h3>Primitive types</h3>
+
+<table>
+  <tr><th>ISPC Type</th><th>Size</th><th>C Equivalent</th><th>Notes</th></tr>
+  <tr><td><code>bool</code></td><td>8-bit</td><td><code>bool</code></td><td>true=1, false=0 (matches C ABI since v1.23)</td></tr>
+  <tr><td><code>int8</code> / <code>uint8</code></td><td>8-bit</td><td><code>int8_t</code> / <code>uint8_t</code></td><td>Byte-wide integers</td></tr>
+  <tr><td><code>int16</code> / <code>uint16</code></td><td>16-bit</td><td><code>int16_t</code> / <code>uint16_t</code></td><td></td></tr>
+  <tr><td><code>int</code> / <code>int32</code> / <code>uint32</code></td><td>32-bit</td><td><code>int32_t</code></td><td><code>int</code> is always 32-bit in ISPC (unlike C)</td></tr>
+  <tr><td><code>int64</code> / <code>uint64</code></td><td>64-bit</td><td><code>int64_t</code></td><td></td></tr>
+  <tr><td><code>float16</code></td><td>16-bit</td><td>(no direct C equiv)</td><td>Half precision; requires AVX2+ or conversion</td></tr>
+  <tr><td><code>float</code></td><td>32-bit</td><td><code>float</code></td><td>IEEE 754 single precision</td></tr>
+  <tr><td><code>double</code></td><td>64-bit</td><td><code>double</code></td><td>IEEE 754 double precision</td></tr>
+</table>
+
+<p>An important difference from C: in ISPC, <code>int</code> is always 32 bits. There is no <code>long</code> ambiguity. Use <code>int64</code> when you need 64-bit integers explicitly.</p>
+
+<h3>Short vector types: fixed-size mathematical vectors</h3>
+
+<p>ISPC provides a family of fixed-size vector types written as <code>type&lt;N&gt;</code>. These are completely independent of the SIMD gang width — they're just convenient containers for 2, 3, or 4-component math vectors (like positions, colors, quaternions).</p>
+
+<pre><span class="ty">float</span>&lt;<span class="nu">3</span>&gt; position;      <span class="cm">// 3-component float vector (x, y, z)</span>
+<span class="ty">float</span>&lt;<span class="nu">4</span>&gt; color;         <span class="cm">// RGBA</span>
+<span class="ty">int</span>&lt;<span class="nu">2</span>&gt;   pixel_coord;   <span class="cm">// 2D pixel position</span>
+
+<span class="cm">// Access by name or index</span>
+position.x = <span class="nu">1.0f</span>;
+position.y = <span class="nu">2.0f</span>;
+position.z = <span class="nu">3.0f</span>;
+<span class="ty">float</span> w = color[<span class="nu">3</span>];   <span class="cm">// alpha channel</span>
+
+<span class="cm">// These can be uniform or varying:</span>
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; world_up = {<span class="nu">0.0f</span>, <span class="nu">1.0f</span>, <span class="nu">0.0f</span>}; <span class="cm">// one vec3 for all lanes</span>
+<span class="ty">float</span>&lt;<span class="nu">3</span>&gt;         per_lane_pos;  <span class="cm">// varying: each lane has its own vec3</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Short vectors and the standard library (v1.28+)</h3>
+
+<p>As of v1.28, short vector functions moved to a dedicated header that you must include:</p>
+
+<pre><span class="pp">#include</span> <span class="st">"short_vec.isph"</span>   <span class="cm">// needed for short vector operations in v1.28+</span>
+
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; a = {<span class="nu">1.0f</span>, <span class="nu">2.0f</span>, <span class="nu">3.0f</span>};
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; b = {<span class="nu">4.0f</span>, <span class="nu">5.0f</span>, <span class="nu">6.0f</span>};
+
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; sum    = a + b;         <span class="cm">// {5, 7, 9}</span>
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; scaled = a * <span class="nu">2.0f</span>;      <span class="cm">// {2, 4, 6}</span>
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; m      = <span class="fn">max</span>(a, b);     <span class="cm">// {4, 5, 6} (element-wise)</span>
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; rooted = <span class="fn">sqrt</span>(a);      <span class="cm">// {1.0, 1.414, 1.732}</span>
+
+<span class="cm">// Dot product (manual, no built-in dot for short vecs)</span>
+<span class="kw">uniform</span> <span class="ty">float</span> dot = a.x*b.x + a.y*b.y + a.z*b.z;  <span class="cm">// 32.0</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Structs and operator overloading</h3>
+
+<pre><span class="kw">struct</span> Color {
+    <span class="ty">float</span> r, g, b, a;
+};
+
+<span class="cm">// Operator overloading (ISPC 1.28+ supports +,-,*,/,==,!=,<,>,<=,>=,etc.)</span>
+<span class="kw">inline</span> Color <span class="kw">operator</span>+(<span class="ty">Color</span> x, <span class="ty">Color</span> y) {
+    Color result;
+    result.r = x.r + y.r;
+    result.g = x.g + y.g;
+    result.b = x.b + y.b;
+    result.a = x.a + y.a;
+    <span class="kw">return</span> result;
+}
+
+<span class="kw">inline</span> Color <span class="kw">operator</span>*(Color c, <span class="ty">float</span> scale) {
+    Color result;
+    result.r = c.r * scale;
+    result.g = c.g * scale;
+    result.b = c.b * scale;
+    result.a = c.a * scale;
+    <span class="kw">return</span> result;
+}
+
+<span class="cm">// Now you can write:</span>
+Color blended = (color_a + color_b) * <span class="nu">0.5f</span>;<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 16 — FOREACH & ITERATION
+════════════════════════════════════════════════════ -->
+<section id="ch16">
+<h2><span class="ch">16</span> foreach and Iteration Patterns</h2>
+
+<p>We've touched on <code>foreach</code> already, but let's go through all its forms and understand the tradeoffs.</p>
+
+<h3>Basic 1D foreach</h3>
+
+<p>This is the workhorse. The range <code>0 ... N</code> is inclusive of 0, exclusive of N. The loop variable is automatically <code>varying</code> — each lane sees a different value.</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="cm">// i is varying. Lane 0: i=0, lane 1: i=1, ..., lane 7: i=7</span>
+    <span class="cm">// Next iteration: lane 0: i=8, lane 1: i=9, ...etc.</span>
+    output[i] = <span class="fn">sin</span>(input[i]);
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Multi-dimensional foreach: processing 2D and 3D data</h3>
+
+<p>When working with image or volume data, you often want to iterate over two or three indices at once. ISPC's <code>foreach</code> supports multiple dimensions:</p>
+
+<pre><span class="kw">export</span> <span class="ty">void</span> <span class="fn">process_image</span>(<span class="kw">uniform</span> <span class="ty">float</span> pixels[], <span class="kw">uniform</span> <span class="ty">int</span> W, <span class="kw">uniform</span> <span class="ty">int</span> H) {
+    <span class="kw">foreach</span> (row = <span class="nu">0</span> ... H, col = <span class="nu">0</span> ... W) {
+        <span class="cm">// 'row' and 'col' are both varying</span>
+        <span class="cm">// ISPC distributes the 2D iteration space across the gang</span>
+        <span class="cm">// So adjacent lanes might be at (row=0,col=0), (row=0,col=1), etc.</span>
+        <span class="ty">int</span> idx = row * W + col;
+        pixels[idx] = <span class="fn">gamma_correct</span>(pixels[idx]);
+    }
+}
+
+<span class="cm">// 3D volume data</span>
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">process_volume</span>(<span class="kw">uniform</span> <span class="ty">float</span> vol[], <span class="kw">uniform</span> <span class="ty">int</span> X, <span class="kw">uniform</span> <span class="ty">int</span> Y, <span class="kw">uniform</span> <span class="ty">int</span> Z) {
+    <span class="kw">foreach</span> (z = <span class="nu">0</span> ... Z, y = <span class="nu">0</span> ... Y, x = <span class="nu">0</span> ... X) {
+        <span class="ty">int</span> idx = (z * Y + y) * X + x;
+        vol[idx] = <span class="fn">process_voxel</span>(vol[idx], x, y, z);
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>foreach_tiled: different distribution for better cache behavior</h3>
+
+<p>Regular <code>foreach</code> distributes elements in a linear (row-major) order. For some 2D algorithms, a tiled distribution — where a gang processes a small 2D tile rather than a row-wide strip — can improve cache locality because all 8 lanes access nearby pixels.</p>
+
+<pre><span class="cm">// Regular foreach: lane assignment for 4-wide gang on a 4×4 image</span>
+<span class="cm">// iter 1: pixels (0,0) (0,1) (0,2) (0,3)  ← same row, sequential in memory</span>
+<span class="cm">// iter 2: pixels (1,0) (1,1) (1,2) (1,3)  ← next row</span>
+
+<span class="cm">// foreach_tiled: tiles the space differently</span>
+<span class="cm">// iter 1: pixels (0,0) (0,1) (1,0) (1,1)  ← 2×2 tile, spatially local</span>
+<span class="cm">// iter 2: pixels (0,2) (0,3) (1,2) (1,3)  ← next tile</span>
+<span class="kw">foreach_tiled</span> (row = <span class="nu">0</span> ... H, col = <span class="nu">0</span> ... W) {
+    <span class="cm">// Same code, different lane layout for cache efficiency</span>
+    pixels[row * W + col] = <span class="fn">process_pixel</span>(row, col);
+}<span class="lang-tag">ispc</span></pre>
+
+<p>Use <code>foreach_tiled</code> when your kernel reads data from a 2D neighborhood (e.g., blur filters, convolutions) — the tiled distribution means nearby lanes access overlapping data, which stays hot in cache.</p>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 17 — FUNCTIONS
+════════════════════════════════════════════════════ -->
+<section id="ch17">
+<h2><span class="ch">17</span> Functions — Declarations, Calls, and Interop</h2>
+
+<h3>export, task, and plain functions</h3>
+
+<p>ISPC has three kinds of function declarations, each with a different purpose:</p>
+
+<table>
+  <tr><th>Declaration</th><th>Callable from</th><th>Uniform/varying state</th><th>Use case</th></tr>
+  <tr>
+    <td><code>export void foo()</code></td>
+    <td>C++ and ISPC</td>
+    <td>Enters SPMD mode: varying defaults</td>
+    <td>Public API called by C++</td>
+  </tr>
+  <tr>
+    <td><code>void foo()</code> (no qualifier)</td>
+    <td>ISPC only</td>
+    <td>Stays in current SPMD mode</td>
+    <td>Internal helpers, can be inlined</td>
+  </tr>
+  <tr>
+    <td><code>task void foo()</code></td>
+    <td>Via <code>launch</code> statement</td>
+    <td>Starts fresh SPMD mode</td>
+    <td>Multi-core task functions (Chapter 18)</td>
+  </tr>
+</table>
+
+<pre><span class="cm">// Internal helper: inline if possible, no C++ visibility</span>
+<span class="kw">inline</span> <span class="ty">float</span> <span class="fn">fast_sigmoid</span>(<span class="ty">float</span> x) {
+    <span class="kw">return</span> <span class="nu">1.0f</span> / (<span class="nu">1.0f</span> + <span class="fn">exp</span>(-x));
+}
+
+<span class="cm">// Public kernel: C++ calls this, it's in the namespace ispc::</span>
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">apply_sigmoid</span>(<span class="kw">uniform</span> <span class="ty">float</span> data[], <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        data[i] = <span class="fn">fast_sigmoid</span>(data[i]);  <span class="cm">// calls helper with varying float</span>
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Calling C functions from ISPC</h3>
+
+<p>Sometimes you need to call an existing C function from within ISPC. This works, but there's an important constraint: C functions are scalar — they take one value and return one value. If you call a C function with a <em>varying</em> argument, ISPC must call it once per active lane, serially. This destroys SIMD parallelism for that call.</p>
+
+<pre><span class="cm">// Declare the C function</span>
+<span class="kw">extern</span> <span class="st">"C"</span> <span class="kw">uniform</span> <span class="ty">float</span> <span class="fn">my_c_function</span>(<span class="kw">uniform</span> <span class="ty">float</span> x);
+
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">call_c_example</span>(<span class="kw">uniform</span> <span class="ty">float</span> data[], <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="cm">// GOOD: uniform argument → one call, fast</span>
+    <span class="kw">uniform</span> <span class="ty">float</span> global_factor = <span class="fn">my_c_function</span>(data[<span class="nu">0</span>]);
+
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        <span class="cm">// SLOW: varying argument → called 8 times serially (once per lane)</span>
+        <span class="cm">// Avoid this pattern in hot loops!</span>
+        <span class="ty">float</span> per_lane_result = <span class="fn">my_c_function</span>(data[i]);
+
+        data[i] *= global_factor;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Function overloading</h3>
+
+<p>ISPC supports function overloading exactly like C++. You can define the same function name for different types:</p>
+
+<pre><span class="ty">float</span> <span class="fn">clamp</span>(<span class="ty">float</span> v,  <span class="ty">float</span> lo,  <span class="ty">float</span> hi)  { <span class="kw">return</span> <span class="fn">min</span>(<span class="fn">max</span>(v, lo), hi); }
+<span class="ty">int</span>   <span class="fn">clamp</span>(<span class="ty">int</span>   v,  <span class="ty">int</span>   lo,  <span class="ty">int</span>   hi)  { <span class="kw">return</span> <span class="fn">min</span>(<span class="fn">max</span>(v, lo), hi); }
+
+<span class="cm">// The compiler picks the right version based on argument types</span>
+<span class="ty">float</span> cf = <span class="fn">clamp</span>(<span class="nu">3.5f</span>, <span class="nu">0.0f</span>, <span class="nu">1.0f</span>);   <span class="cm">// picks float version</span>
+<span class="ty">int</span>   ci = <span class="fn">clamp</span>(<span class="nu">200</span>,  <span class="nu">0</span>,    <span class="nu">255</span>);    <span class="cm">// picks int version</span><span class="lang-tag">ispc</span></pre>
+
+<h3>The external_only attribute (v1.25+)</h3>
+
+<p>By default, <code>export</code> functions generate two versions: one callable from C++ (external), and one callable from other ISPC functions (internal). The internal version can increase code size significantly. If you only call the function from C++, use <code>external_only</code> to suppress the internal version:</p>
+
+<pre><span class="cm">// This function is ONLY ever called from C++, not from other ISPC code</span>
+__attribute__((external_only))
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">my_kernel</span>(<span class="kw">uniform</span> <span class="ty">float</span> data[], <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        data[i] *= <span class="nu">2.0f</span>;
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 18 — TASK PARALLELISM
+════════════════════════════════════════════════════ -->
+<section id="ch18">
+<h2><span class="ch">18</span> Task Parallelism — Multi-Core with ISPC</h2>
+
+<p>So far, everything we've discussed runs on a <em>single CPU core</em> using SIMD. ISPC also has a system for distributing work across <em>multiple CPU cores</em> simultaneously. This uses a different mechanism: <strong>tasks</strong>.</p>
+
+<h3>The two levels of parallelism</h3>
+
+<div class="diagram">  Without tasks (single core):
+  Core 0: [gang][gang][gang][gang][gang]...  → all work on one core, SIMD only
+
+  With tasks (multi-core):
+  Core 0: [task 0 - gang][gang][gang]...
+  Core 1: [task 1 - gang][gang][gang]...    → 4 cores × 8 SIMD = 32× parallelism
+  Core 2: [task 2 - gang][gang][gang]...
+  Core 3: [task 3 - gang][gang][gang]...</div>
+
+<p>Tasks are like threads, but they go through ISPC's lightweight task scheduler rather than creating OS threads. Each task is itself an ISPC SPMD function — it runs a whole gang per "iteration" internally.</p>
+
+<h3>Defining a task function</h3>
+
+<p>A task function uses the <code>task</code> keyword instead of <code>export</code>. Inside, it has access to two special built-in variables: <code>taskIndex</code> (which task am I?) and <code>taskCount</code> (how many tasks total?). Both are <code>uniform</code>.</p>
+
+<pre><span class="cm">// A task processes a chunk of the total work</span>
+<span class="kw">task</span> <span class="ty">void</span> <span class="fn">compute_chunk</span>(<span class="kw">uniform</span> <span class="ty">float</span> input[], <span class="kw">uniform</span> <span class="ty">float</span> output[],
+                          <span class="kw">uniform</span> <span class="ty">int</span> totalN) {
+
+    <span class="cm">// Each task handles a contiguous slice of the array</span>
+    <span class="cm">// taskIndex and taskCount divide up the work evenly</span>
+    <span class="kw">uniform</span> <span class="ty">int</span> start = (taskIndex * totalN) / taskCount;
+    <span class="kw">uniform</span> <span class="ty">int</span> end   = ((taskIndex + <span class="nu">1</span>) * totalN) / taskCount;
+
+    <span class="cm">// Inside the task, we use SIMD foreach as normal</span>
+    <span class="kw">foreach</span> (i = start ... end) {
+        output[i] = <span class="fn">sqrt</span>(input[i]) * <span class="fn">log</span>(input[i] + <span class="nu">1.0f</span>);
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Launching tasks and waiting for them</h3>
+
+<pre><span class="kw">export</span> <span class="ty">void</span> <span class="fn">compute_parallel</span>(<span class="kw">uniform</span> <span class="ty">float</span> input[], <span class="kw">uniform</span> <span class="ty">float</span> output[],
+                               <span class="kw">uniform</span> <span class="ty">int</span> N) {
+
+    <span class="cm">// Choose task count: typically 1-2× the number of CPU cores</span>
+    <span class="cm">// Too few: underutilizes cores. Too many: task overhead dominates.</span>
+    <span class="kw">uniform</span> <span class="ty">int</span> numTasks = <span class="nu">8</span>;   <span class="cm">// tune to your machine</span>
+
+    <span class="cm">// Launch all tasks simultaneously — they run in parallel on different cores</span>
+    <span class="kw">launch</span>[numTasks] <span class="fn">compute_chunk</span>(input, output, N);
+
+    <span class="cm">// 'sync' blocks until ALL launched tasks have completed</span>
+    <span class="cm">// You must sync before accessing any data that tasks wrote to</span>
+    <span class="kw">sync</span>;
+
+    <span class="cm">// Now all output[] values are ready</span>
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>The task runtime requirement</h3>
+
+<p>ISPC tasks need a runtime library to manage thread pools and scheduling. ISPC ships with one in its examples directory. You need to compile and link it with your program:</p>
+
+<pre><span class="cm"># Compile the task system (once, or add to your build)</span>
+g++ -O2 -c ispc/examples/common/tasksys.cpp -o tasksys.o
+
+<span class="cm"># Link it with your program</span>
+g++ main.o mykernel.o tasksys.o -o my_program -lpthread<span class="lang-tag">bash</span></pre>
+
+<p>Alternatively, you can use Intel TBB (Threading Building Blocks) as the task backend, or implement your own task system — ISPC has a clean interface for this.</p>
+
+<div class="box box-tip">
+  <span class="box-title">💡 When to use tasks</span>
+  <p>Tasks are worth the setup cost only for large workloads. For arrays of fewer than ~100,000 elements, the task launch overhead may outweigh the speedup. Use tasks when your total work takes more than a few milliseconds. For small kernels called in a tight loop, SIMD-only (no tasks) is often faster.</p>
+</div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 19 — MATH FUNCTIONS
+════════════════════════════════════════════════════ -->
+<section id="ch19">
+<h2><span class="ch">19</span> The Standard Library — Math Functions</h2>
+
+<p>ISPC's standard library provides vectorized versions of all standard math functions. Unlike C's <code>math.h</code>, which operates on one value at a time, ISPC's versions automatically operate on an entire gang (8 values at once on AVX2) using hardware SIMD instructions.</p>
+
+<h3>Basic math</h3>
+<pre><span class="ty">float</span> v = data[<span class="bi">programIndex</span>];   <span class="cm">// a varying float</span>
+
+<span class="cm">// All of these operate on the entire gang simultaneously:</span>
+<span class="ty">float</span> a = <span class="fn">abs</span>(v);              <span class="cm">// absolute value</span>
+<span class="ty">float</span> s = <span class="fn">sqrt</span>(v);             <span class="cm">// square root</span>
+<span class="ty">float</span> r = <span class="fn">rsqrt</span>(v);            <span class="cm">// reciprocal sqrt: 1/sqrt(v)</span>
+<span class="ty">float</span> f = <span class="fn">rsqrt_fast</span>(v);       <span class="cm">// fast approximation of 1/sqrt(v) (lower precision)</span>
+<span class="ty">float</span> lo = <span class="fn">floor</span>(v);           <span class="cm">// round down</span>
+<span class="ty">float</span> hi = <span class="fn">ceil</span>(v);            <span class="cm">// round up</span>
+<span class="ty">float</span> ro = <span class="fn">round</span>(v);           <span class="cm">// round to nearest</span>
+<span class="ty">float</span> tr = <span class="fn">trunc</span>(v);           <span class="cm">// truncate toward zero</span>
+<span class="ty">float</span> sg = <span class="fn">sign</span>(v);            <span class="cm">// -1.0, 0.0, or +1.0</span>
+<span class="ty">float</span> mn = <span class="fn">min</span>(v, <span class="nu">0.0f</span>);       <span class="cm">// element-wise minimum</span>
+<span class="ty">float</span> mx = <span class="fn">max</span>(v, <span class="nu">1.0f</span>);       <span class="cm">// element-wise maximum</span>
+<span class="ty">float</span> cl = <span class="fn">clamp</span>(v, <span class="nu">0.0f</span>, <span class="nu">1.0f</span>); <span class="cm">// clamp to [0, 1]</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Transcendental functions</h3>
+<pre><span class="ty">float</span> sinv  = <span class="fn">sin</span>(v);
+<span class="ty">float</span> cosv  = <span class="fn">cos</span>(v);
+<span class="ty">float</span> tanv  = <span class="fn">tan</span>(v);
+<span class="ty">float</span> asinv = <span class="fn">asin</span>(v);         <span class="cm">// inverse trig</span>
+<span class="ty">float</span> acosv = <span class="fn">acos</span>(v);
+<span class="ty">float</span> atanv = <span class="fn">atan</span>(v);
+<span class="ty">float</span> a2    = <span class="fn">atan2</span>(v, w);     <span class="cm">// 2-argument arctangent</span>
+<span class="ty">float</span> expv  = <span class="fn">exp</span>(v);          <span class="cm">// e^v</span>
+<span class="ty">float</span> logv  = <span class="fn">log</span>(v);          <span class="cm">// natural log</span>
+<span class="ty">float</span> powv  = <span class="fn">pow</span>(v, <span class="nu">2.3f</span>);   <span class="cm">// v^2.3</span>
+<span class="ty">float</span> cbv   = <span class="fn">cbrt</span>(v);         <span class="cm">// cube root (v1.27+)</span>
+<span class="ty">float</span> fmv   = <span class="fn">fmod</span>(v, <span class="nu">1.0f</span>);  <span class="cm">// floating-point remainder</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Floating-point predicates</h3>
+<pre><span class="ty">bool</span> nan_v     = <span class="fn">isnan</span>(v);     <span class="cm">// is this value NaN?</span>
+<span class="ty">bool</span> inf_v     = <span class="fn">isinf</span>(v);     <span class="cm">// is this value ±infinity?</span>
+<span class="ty">bool</span> finite_v  = <span class="fn">isfinite</span>(v);  <span class="cm">// is this a normal finite number?</span>
+
+<span class="cm">// These return varying bool — one answer per lane</span>
+<span class="cm">// Lane 0 might have a NaN while lane 3 has a normal number</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Saturating arithmetic</h3>
+
+<p>Regular integer arithmetic wraps around on overflow (255 + 1 = 0 for uint8). Saturating arithmetic clamps instead (255 + 1 = 255 for uint8). This is useful for image processing:</p>
+
+<pre><span class="ty">uint8</span> a = <span class="nu">200</span>, b = <span class="nu">100</span>;
+<span class="ty">uint8</span> wrapped   = a + b;            <span class="cm">// 44 — WRONG for image add</span>
+<span class="ty">uint8</span> saturated = <span class="fn">saturating_add</span>(a, b);  <span class="cm">// 255 — clamped</span><span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 20 — REDUCTIONS
+════════════════════════════════════════════════════ -->
+<section id="ch20">
+<h2><span class="ch">20</span> Reductions — Aggregating Values Across Lanes</h2>
+
+<p>A <strong>reduction</strong> takes one value per lane (a varying value) and combines all of them into a single uniform value. This is how you compute things like "the sum of all elements" or "is any element greater than zero" from within a SIMD kernel.</p>
+
+<h3>Why you can't just add varying values to get a scalar</h3>
+
+<p>If <code>v</code> is a varying float (8 different values across 8 lanes), you can't write:</p>
+
+<pre><span class="kw">uniform</span> <span class="ty">float</span> total = v;  <span class="cm">// ERROR: which of the 8 values do you mean?</span><span class="lang-tag">ispc</span></pre>
+
+<p>You need an explicit reduction that says <em>how</em> to combine the 8 values. The <code>reduce_add</code> function adds all 8 lane values together into one scalar result. The CPU does this with a short sequence of SIMD instructions (horizontal additions) — still much faster than doing 8 scalar adds.</p>
+
+<h3>Available reductions</h3>
+
+<pre><span class="ty">float</span> v = data[<span class="bi">programIndex</span>];   <span class="cm">// varying: 8 different values</span>
+
+<span class="cm">// Sum all 8 lane values</span>
+<span class="kw">uniform</span> <span class="ty">float</span> total = <span class="fn">reduce_add</span>(v);
+<span class="cm">// e.g. v = [1,2,3,4,5,6,7,8] → total = 36</span>
+
+<span class="cm">// Maximum across all lanes</span>
+<span class="kw">uniform</span> <span class="ty">float</span> maxval = <span class="fn">reduce_max</span>(v);
+<span class="cm">// e.g. v = [3, 8, 1, 5] → maxval = 8</span>
+
+<span class="cm">// Minimum across all lanes</span>
+<span class="kw">uniform</span> <span class="ty">float</span> minval = <span class="fn">reduce_min</span>(v);
+
+<span class="cm">// Logical: is ANY lane's condition true?</span>
+<span class="kw">uniform</span> <span class="ty">bool</span> has_negative = <span class="fn">any</span>(v &lt; <span class="nu">0.0f</span>);
+<span class="cm">// Returns true if at least one lane has v < 0</span>
+
+<span class="cm">// Logical: are ALL lanes' conditions true?</span>
+<span class="kw">uniform</span> <span class="ty">bool</span> all_positive = <span class="fn">all</span>(v &gt; <span class="nu">0.0f</span>);
+<span class="cm">// Returns true only if every lane has v > 0</span>
+
+<span class="cm">// Logical: are NO lanes' conditions true?</span>
+<span class="kw">uniform</span> <span class="ty">bool</span> no_nans = <span class="fn">none</span>(<span class="fn">isnan</span>(v));<span class="lang-tag">ispc</span></pre>
+
+<h3>Using reductions in practice: dot product</h3>
+
+<pre><span class="kw">export</span> <span class="kw">uniform</span> <span class="ty">float</span> <span class="fn">dot_product</span>(<span class="kw">uniform</span> <span class="ty">float</span> a[], <span class="kw">uniform</span> <span class="ty">float</span> b[],
+                                    <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="cm">// 'partial' accumulates sums within each lane independently</span>
+    <span class="ty">float</span> partial = <span class="nu">0.0f</span>;   <span class="cm">// varying: each lane has its own running total</span>
+
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        partial += a[i] * b[i];  <span class="cm">// SIMD: 8 multiply-adds per instruction</span>
+    }
+
+    <span class="cm">// Now partial has 8 partial sums (one per lane)</span>
+    <span class="cm">// Sum them into one uniform result</span>
+    <span class="kw">return</span> <span class="fn">reduce_add</span>(partial);
+    <span class="cm">// For N=16 on 8-wide: we did 2 SIMD iterations → 2 fused multiply-adds</span>
+    <span class="cm">// Plus one 8-way horizontal sum at the end. Very fast!</span>
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Reductions for early exit</h3>
+
+<pre><span class="kw">export</span> <span class="kw">uniform</span> <span class="ty">bool</span> <span class="fn">contains_nan</span>(<span class="kw">uniform</span> <span class="ty">float</span> data[], <span class="kw">uniform</span> <span class="ty">int</span> N) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        <span class="kw">if</span> (<span class="fn">any</span>(<span class="fn">isnan</span>(data[i]))) {
+            <span class="cm">// any() gives a uniform bool: if ANY lane found a NaN,</span>
+            <span class="cm">// we can break out of the foreach immediately</span>
+            <span class="kw">return</span> <span class="kw">true</span>;
+        }
+    }
+    <span class="kw">return</span> <span class="kw">false</span>;
+}<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 21 — CROSS-LANE OPERATIONS
+════════════════════════════════════════════════════ -->
+<section id="ch21">
+<h2><span class="ch">21</span> Cross-Lane Operations — Shuffles, Broadcasts, Rotates</h2>
+
+<p>Sometimes you need to share data <em>between</em> lanes within the same gang. For example, lane 3 might need to know what lane 0's value is. These are called <strong>cross-lane operations</strong>, and they use SIMD shuffle instructions under the hood.</p>
+
+<h3>broadcast: send one lane's value to all lanes</h3>
+
+<p><code>broadcast(v, lane)</code> takes the value of <code>v</code> in a specific <code>lane</code> and returns it to all lanes:</p>
+
+<pre><span class="ty">float</span> v = data[<span class="bi">programIndex</span>];
+<span class="cm">// Suppose v = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0]</span>
+
+<span class="ty">float</span> b = <span class="fn">broadcast</span>(v, <span class="nu">0</span>);
+<span class="cm">// b = [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]</span>
+<span class="cm">// All lanes now have lane 0's value</span>
+
+<span class="ty">float</span> c = <span class="fn">broadcast</span>(v, <span class="nu">5</span>);
+<span class="cm">// c = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]</span><span class="lang-tag">ispc</span></pre>
+
+<h3>rotate: shift values around the ring of lanes</h3>
+
+<p><code>rotate(v, delta)</code> shifts each lane's value by <code>delta</code> positions, wrapping around:</p>
+
+<pre><span class="ty">float</span> v = data[<span class="bi">programIndex</span>];
+<span class="cm">// v = [A, B, C, D, E, F, G, H]</span>
+
+<span class="ty">float</span> r = <span class="fn">rotate</span>(v, <span class="nu">1</span>);
+<span class="cm">// r = [H, A, B, C, D, E, F, G]  — shifted left by 1, H wraps around</span>
+
+<span class="ty">float</span> s = <span class="fn">rotate</span>(v, -<span class="nu">1</span>);
+<span class="cm">// s = [B, C, D, E, F, G, H, A]  — shifted right by 1</span><span class="lang-tag">ispc</span></pre>
+
+<p><strong>When is rotate useful?</strong> For stencil computations (finite differences, convolutions) where each element's result depends on its neighbors. Instead of loading the data multiple times with offsets, you can load once and use <code>rotate</code> to access neighbors:</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">1</span> ... N-<span class="nu">1</span>) {
+    <span class="ty">float</span> center = data[i];
+    <span class="ty">float</span> right  = <span class="fn">rotate</span>(center, <span class="nu">1</span>);   <span class="cm">// neighbor to the right</span>
+    <span class="ty">float</span> left   = <span class="fn">rotate</span>(center, -<span class="nu">1</span>);  <span class="cm">// neighbor to the left</span>
+
+    <span class="cm">// Finite difference: central difference approximation of derivative</span>
+    result[i] = (right - left) * <span class="nu">0.5f</span>;
+    <span class="cm">// Note: at gang boundaries, you'll need to handle the edge cases</span>
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>shuffle: arbitrary reordering</h3>
+
+<p><code>shuffle(v, perm)</code> reorders lane values according to a varying index <code>perm</code>. Lane N gets the value from lane <code>perm[N]</code>:</p>
+
+<pre><span class="ty">float</span> v    = data[<span class="bi">programIndex</span>];
+<span class="ty">int</span>   perm = (<span class="bi">programCount</span> - <span class="nu">1</span>) - <span class="bi">programIndex</span>;  <span class="cm">// [7,6,5,4,3,2,1,0]</span>
+<span class="ty">float</span> rev  = <span class="fn">shuffle</span>(v, perm);  <span class="cm">// reverses the lane order</span><span class="lang-tag">ispc</span></pre>
+
+<div class="box box-warn">
+  <span class="box-title">⚠️ Cross-lane operations are relatively expensive</span>
+  <p>Shuffle, rotate, and broadcast all require SIMD permute instructions, which can take 3–5 cycles and may require specific hardware support. Use them when necessary, but don't use them in inner loops if a simpler data layout would avoid them. For most algorithms, good data layout (SOA) eliminates the need for cross-lane operations entirely.</p>
+</div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 22 — ATOMICS
+════════════════════════════════════════════════════ -->
+<section id="ch22">
+<h2><span class="ch">22</span> Atomic Operations</h2>
+
+<p>Atomic operations let multiple lanes (or threads) safely modify shared memory without data races. They're "atomic" in the sense that each operation appears to happen instantaneously — no other operation can see a partially-completed result.</p>
+
+<h3>The problem without atomics</h3>
+
+<p>Suppose you want to count how many elements pass a filter. The naive approach has a race condition:</p>
+
+<pre><span class="kw">uniform</span> <span class="ty">int</span> count = <span class="nu">0</span>;
+
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="kw">if</span> (data[i] &gt; threshold) {
+        count++;  <span class="cm">// BUG: race condition — multiple lanes increment simultaneously</span>
+                  <span class="cm">// The result is unpredictable</span>
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>The correct approach: atomic or reduction</h3>
+
+<p>There are two ways to fix this. The reduction approach is usually faster:</p>
+
+<pre><span class="cm">// Option 1: atomic increment (correct but slower)</span>
+<span class="kw">uniform</span> <span class="ty">int</span> count = <span class="nu">0</span>;
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="kw">if</span> (data[i] &gt; threshold) {
+        <span class="cm">// atomic_add_global: safely adds 1 to count from any lane/thread</span>
+        <span class="fn">atomic_add_global</span>(&amp;count, <span class="nu">1</span>);
+    }
+}
+
+<span class="cm">// Option 2: reduction (faster — no atomic hardware needed)</span>
+<span class="ty">int</span> local_count = <span class="nu">0</span>;   <span class="cm">// varying: each lane tracks its own count</span>
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="kw">if</span> (data[i] &gt; threshold) {
+        local_count++;   <span class="cm">// no race: each lane increments its own copy</span>
+    }
+}
+<span class="kw">uniform</span> <span class="ty">int</span> total = <span class="fn">reduce_add</span>(local_count);  <span class="cm">// combine at the end</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Available atomic functions</h3>
+
+<pre><span class="cm">// All variants: _global (between tasks/threads), _local (within a task)</span>
+
+<span class="cm">// Integer atomics</span>
+<span class="ty">int</span> old = <span class="fn">atomic_add_global</span>(&amp;shared_int, <span class="nu">1</span>);    <span class="cm">// returns old value</span>
+<span class="ty">int</span> old = <span class="fn">atomic_subtract_global</span>(&amp;counter, <span class="nu">1</span>);
+<span class="ty">int</span> old = <span class="fn">atomic_min_global</span>(&amp;min_val, x);
+<span class="ty">int</span> old = <span class="fn">atomic_max_global</span>(&amp;max_val, x);
+<span class="ty">int</span> old = <span class="fn">atomic_and_global</span>(&amp;flags, mask);
+<span class="ty">int</span> old = <span class="fn">atomic_or_global</span>(&amp;flags, bit);
+<span class="ty">int</span> old = <span class="fn">atomic_xor_global</span>(&amp;flags, bit);
+<span class="ty">int</span> old = <span class="fn">atomic_swap_global</span>(&amp;val, new_val);
+
+<span class="cm">// Compare-and-swap: atomically: if *ptr == cmp, set *ptr = new_val</span>
+<span class="ty">int</span> old = <span class="fn">atomic_compare_exchange_global</span>(&amp;val, cmp, new_val);
+
+<span class="cm">// Float atomics (v1.30+)</span>
+<span class="ty">float</span> old = <span class="fn">atomic_add_global</span>(&amp;shared_float, delta_f);<span class="lang-tag">ispc</span></pre>
+
+<h3>foreach_active for atomic operations</h3>
+
+<p>A common pattern: use <code>foreach_active</code> to serialize the atomic operations, which is faster than issuing gated atomics from all lanes:</p>
+
+<pre><span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="kw">if</span> (passes_filter(data[i])) {
+        <span class="kw">foreach_active</span> (lane) {
+            <span class="cm">// Serial: each active lane does its atomic one at a time</span>
+            <span class="cm">// This avoids hardware contention on the atomic unit</span>
+            <span class="ty">int</span> slot = <span class="fn">atomic_add_global</span>(&amp;write_pos, <span class="nu">1</span>);
+            out[slot] = data[i];  <span class="cm">// data[i] is now uniform (current lane's value)</span>
+        }
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 23 — C/C++ INTEROP
+════════════════════════════════════════════════════ -->
+<section id="ch23">
+<h2><span class="ch">23</span> C/C++ Interoperability in Depth</h2>
+
+<h3>Complete type mapping</h3>
+
+<p>When you pass data between C++ and ISPC, the types map according to this table. The key rule: only <code>uniform</code> types can cross the boundary — <code>varying</code> types are SIMD registers and have no C equivalent.</p>
+
+<table>
+  <tr><th>ISPC type</th><th>C/C++ type</th><th>Notes</th></tr>
+  <tr><td><code>uniform bool</code></td><td><code>bool</code></td><td>true=1 (v1.23+ matches C ABI)</td></tr>
+  <tr><td><code>uniform int8</code></td><td><code>int8_t</code></td><td></td></tr>
+  <tr><td><code>uniform int16</code></td><td><code>int16_t</code></td><td></td></tr>
+  <tr><td><code>uniform int</code> / <code>uniform int32</code></td><td><code>int32_t</code></td><td></td></tr>
+  <tr><td><code>uniform int64</code></td><td><code>int64_t</code></td><td></td></tr>
+  <tr><td><code>uniform float</code></td><td><code>float</code></td><td></td></tr>
+  <tr><td><code>uniform double</code></td><td><code>double</code></td><td></td></tr>
+  <tr><td><code>uniform T*</code></td><td><code>T*</code></td><td>Pointer to arrays processed by ISPC</td></tr>
+  <tr><td><code>varying anything</code></td><td><em>not representable</em></td><td>Cannot cross boundary</td></tr>
+</table>
+
+<h3>Sharing struct definitions between C++ and ISPC</h3>
+
+<p>The cleanest way to share data structures is to define them in a C++ header and include that header in your ISPC file. The same struct layout rules apply (C ABI, no hidden padding):</p>
+
+<pre><span class="cm">// shared_types.h — included by both C++ and ISPC</span>
+<span class="pp">#pragma once</span>
+<span class="pp">#include</span> <span class="st">&lt;stdint.h&gt;</span>
+
+<span class="kw">struct</span> Ray {
+    <span class="ty">float</span> ox, oy, oz;  <span class="cm">// origin</span>
+    <span class="ty">float</span> dx, dy, dz;  <span class="cm">// direction (normalized)</span>
+    <span class="ty">float</span> tmin, tmax;  <span class="cm">// valid interval</span>
+};<span class="lang-tag">C++</span></pre>
+
+<pre><span class="cm">// ray_kernel.ispc</span>
+<span class="pp">#include</span> <span class="st">"shared_types.h"</span>
+
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">trace_rays</span>(<span class="kw">uniform</span> Ray rays[], <span class="kw">uniform</span> <span class="ty">int</span> N,
+                         <span class="kw">uniform</span> <span class="ty">float</span> hit_t[]) {
+    <span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+        <span class="cm">// Access AOS struct fields — they become gathers (see Chapter 13)</span>
+        <span class="ty">float</span> ox = rays[i].ox;   <span class="cm">// each lane reads from a different Ray</span>
+        <span class="ty">float</span> dx = rays[i].dx;
+        hit_t[i] = <span class="fn">intersect_sphere</span>(ox, dx, ...);
+    }
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>Calling ISPC from C++: the complete pattern</h3>
+
+<pre><span class="cm">// main.cpp</span>
+<span class="pp">#include</span> <span class="st">"shared_types.h"</span>
+<span class="pp">#include</span> <span class="st">"ray_kernel_ispc.h"</span>   <span class="cm">// generated by ISPC</span>
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="kw">const int</span> N = <span class="nu">65536</span>;
+    Ray*   rays  = (<span class="ty">Ray</span>*)  <span class="fn">aligned_alloc</span>(<span class="nu">64</span>, N * <span class="kw">sizeof</span>(Ray));
+    <span class="ty">float</span>* hit_t = (<span class="ty">float</span>*)<span class="fn">aligned_alloc</span>(<span class="nu">64</span>, N * <span class="kw">sizeof</span>(<span class="ty">float</span>));
+
+    <span class="fn">fill_rays</span>(rays, N);  <span class="cm">// your C++ setup code</span>
+
+    <span class="cm">// Call the ISPC kernel — no special syntax, just a namespace prefix</span>
+    ispc::<span class="fn">trace_rays</span>(rays, N, hit_t);
+
+    <span class="fn">process_results</span>(hit_t, N);
+
+    <span class="fn">free</span>(rays); <span class="fn">free</span>(hit_t);
+}<span class="lang-tag">C++</span></pre>
+
+<h3>Using ISPC as a runtime-linked library (v1.28+)</h3>
+
+<p>ISPC 1.28 introduced libispc, which lets you embed the ISPC compiler in your application and compile kernels at runtime (JIT compilation). This is useful for shader systems, scripting, and dynamic code generation:</p>
+
+<pre><span class="pp">#include</span> <span class="st">&lt;ispc/ispc.h&gt;</span>
+
+<span class="kw">const char</span>* kernel_source = <span class="st">R"(
+    export void scale(uniform float data[], uniform int n, uniform float factor) {
+        foreach (i = 0 ... n) { data[i] *= factor; }
+    }
+)"</span>;
+
+<span class="cm">// Compile at runtime for the current CPU</span>
+ISPCEngine engine;
+engine.<span class="fn">Initialize</span>();
+<span class="kw">auto</span> module = engine.<span class="fn">CompileString</span>(kernel_source, <span class="st">"--target=host"</span>);
+
+<span class="cm">// Get a function pointer to the compiled kernel</span>
+<span class="kw">typedef void</span> (*ScaleFn)(<span class="ty">float</span>*, <span class="ty">int</span>, <span class="ty">float</span>);
+ScaleFn scale_fn = (<span class="ty">ScaleFn</span>)module.<span class="fn">GetFunctionPtr</span>(<span class="st">"scale"</span>);
+<span class="fn">scale_fn</span>(my_data, N, <span class="nu">2.0f</span>);   <span class="cm">// runs the JIT-compiled SIMD kernel</span><span class="lang-tag">C++</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 24 — MULTI-TARGET DISPATCH
+════════════════════════════════════════════════════ -->
+<section id="ch24">
+<h2><span class="ch">24</span> Multi-Target Compilation and Auto-Dispatch</h2>
+
+<p>A major practical challenge: you compile your program on your development machine with AVX-512, but users might run it on machines with only SSE4. How do you ship one binary that uses the best available SIMD on every machine?</p>
+
+<p>ISPC's solution: compile for multiple targets at once and include auto-dispatch code that detects the CPU at runtime and calls the right version.</p>
+
+<h3>How to compile for multiple targets</h3>
+
+<pre><span class="cm"># Compile once for three ISA levels simultaneously</span>
+ispc my_kernel.ispc \
+    --target=sse4-i32x4,avx2-i32x8,avx512skx-x16 \
+    -o my_kernel.o \
+    -h my_kernel_ispc.h \
+    -O2<span class="lang-tag">bash</span></pre>
+
+<p>What happens behind the scenes:</p>
+<ol>
+  <li>ISPC compiles three versions of your kernel — one for each target ISA</li>
+  <li>It emits all three into <code>my_kernel.o</code>, with mangled names (<code>kernel_sse4</code>, <code>kernel_avx2</code>, <code>kernel_avx512</code>)</li>
+  <li>It also generates a <em>dispatcher</em> function with the original name (<code>kernel</code>) that runs <code>CPUID</code> at first call, checks which ISA the current CPU supports, and calls the best available version</li>
+  <li>The generated header <code>my_kernel_ispc.h</code> declares only the original name — your C++ code calls it normally and gets the best version automatically</li>
+</ol>
+
+<div class="diagram">  C++ calls: ispc::my_kernel(data, N);
+  
+       ↓
+  Dispatcher (generated):
+  ┌─────────────────────────────────────────┐
+  │  if CPU supports AVX-512: call avx512   │
+  │  else if AVX2:            call avx2     │
+  │  else:                    call sse4     │
+  └─────────────────────────────────────────┘
+         ↓               ↓              ↓
+    [avx512 code]  [avx2 code]   [sse4 code]
+    (16-wide)      (8-wide)      (4-wide)</div>
+
+<h3>All available targets in ISPC 1.30</h3>
+
+<pre><span class="cm"># x86 targets</span>
+sse4-i32x4          <span class="cm"># SSE4.1, 4-wide, ~any x86 CPU since 2007</span>
+avx2-i32x8          <span class="cm"># AVX2 8-wide, Intel Haswell+ or AMD Zen+ (most common target)</span>
+avx2-i32x16         <span class="cm"># AVX2 double-pumped to 16-wide</span>
+avx512skx-x16       <span class="cm"># AVX-512, Skylake-X servers</span>
+avx512icl-x16       <span class="cm"># AVX-512, Ice Lake client</span>
+avx512spr-x16       <span class="cm"># AVX-512 Sapphire Rapids (includes VNNI)</span>
+avx512gnr-x16       <span class="cm"># AVX-512 Granite Rapids (AMX-FP16), v1.29+</span>
+avx10.2dmr-x16      <span class="cm"># AVX10.2, v1.29+ (formerly avx10.2)</span>
+
+<span class="cm"># ARM targets</span>
+neon-i32x4          <span class="cm"># ARM NEON 4-wide (all ARM Cortex-A)</span>
+neon-i16x16         <span class="cm"># ARM NEON 16-wide double-pumped (v1.26+)</span>
+neon-i8x32          <span class="cm"># ARM NEON 32-wide double-pumped (v1.26+)</span>
+
+<span class="cm"># Intel GPU targets (XE family)</span>
+xe-x8               <span class="cm"># Intel Xe integrated GPU</span>
+xehpc-x16           <span class="cm"># Intel Xe HPC (Ponte Vecchio)</span>
+xe2lpg-x16          <span class="cm"># Intel Xe2 Lunar Lake GPU (v1.25+)</span>
+xe2hpg-x16          <span class="cm"># Intel Xe2 Battlemage GPU (v1.25+)</span>
+
+<span class="cm"># Auto</span>
+host                <span class="cm"># whatever ISA the build machine supports</span><span class="lang-tag">bash</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 25 — TEMPLATES
+════════════════════════════════════════════════════ -->
+<section id="ch25">
+<h2><span class="ch">25</span> Templates</h2>
+
+<p>ISPC supports function templates very similar to C++ templates. They let you write one function that works for multiple types, with the type determined at compile time.</p>
+
+<h3>Type templates</h3>
+
+<pre><span class="cm">// Without templates, you'd need this for every type:</span>
+<span class="ty">float</span>  <span class="fn">my_abs_f</span>(<span class="ty">float</span>  v) { <span class="kw">return</span> v &lt; <span class="nu">0</span> ? -v : v; }
+<span class="ty">int</span>    <span class="fn">my_abs_i</span>(<span class="ty">int</span>    v) { <span class="kw">return</span> v &lt; <span class="nu">0</span> ? -v : v; }
+<span class="ty">double</span> <span class="fn">my_abs_d</span>(<span class="ty">double</span> v) { <span class="kw">return</span> v &lt; <span class="nu">0</span> ? -v : v; }
+
+<span class="cm">// With templates, write once, use for any type:</span>
+<span class="kw">template</span>&lt;<span class="kw">typename</span> T&gt;
+T <span class="fn">my_abs</span>(T v) { <span class="kw">return</span> v &lt; (T)<span class="nu">0</span> ? -v : v; }
+
+<span class="ty">float</span>  a = <span class="fn">my_abs</span>&lt;<span class="ty">float</span>&gt; (<span class="nu">-3.14f</span>);   <span class="cm">// 3.14f</span>
+<span class="ty">int</span>    b = <span class="fn">my_abs</span>&lt;<span class="ty">int</span>&gt;   (-<span class="nu">42</span>);       <span class="cm">// 42</span>
+<span class="ty">double</span> c = <span class="fn">my_abs</span>&lt;<span class="ty">double</span>&gt;(-<span class="nu">2.71</span>);    <span class="cm">// 2.71</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Non-type templates: fixed-size algorithms</h3>
+
+<p>Non-type template parameters let you specialize a function for a compile-time constant, like a vector size:</p>
+
+<pre><span class="cm">// Dot product of two N-element arrays, N known at compile time</span>
+<span class="kw">template</span>&lt;<span class="kw">typename</span> T, <span class="ty">int</span> N&gt;
+T <span class="fn">dot</span>(<span class="kw">uniform</span> T a[], <span class="kw">uniform</span> T b[]) {
+    T sum = (T)<span class="nu">0</span>;
+    <span class="cm">// Since N is a compile-time constant, the compiler can fully unroll this</span>
+    <span class="kw">for</span> (<span class="kw">uniform</span> <span class="ty">int</span> i = <span class="nu">0</span>; i &lt; N; i++) {
+        sum += a[i] * b[i];
+    }
+    <span class="kw">return</span> sum;
+}
+
+<span class="kw">uniform</span> <span class="ty">float</span> a3[<span class="nu">3</span>] = {<span class="nu">1</span>, <span class="nu">2</span>, <span class="nu">3</span>};
+<span class="kw">uniform</span> <span class="ty">float</span> b3[<span class="nu">3</span>] = {<span class="nu">4</span>, <span class="nu">5</span>, <span class="nu">6</span>};
+<span class="kw">uniform</span> <span class="ty">float</span> d3 = <span class="fn">dot</span>&lt;<span class="ty">float</span>, <span class="nu">3</span>&gt;(a3, b3);  <span class="cm">// 1*4 + 2*5 + 3*6 = 32</span><span class="lang-tag">ispc</span></pre>
+
+<h3>Templates with short vector types (v1.25+)</h3>
+
+<pre><span class="cm">// A generic linear interpolation for any short vector type</span>
+<span class="kw">template</span>&lt;<span class="kw">typename</span> T, <span class="ty">int</span> N&gt;
+T&lt;N&gt; <span class="fn">lerp</span>(T&lt;N&gt; a, T&lt;N&gt; b, <span class="kw">uniform</span> T t) {
+    <span class="kw">return</span> a + (b - a) * t;
+}
+
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; p0 = {<span class="nu">0.0f</span>, <span class="nu">0.0f</span>, <span class="nu">0.0f</span>};
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; p1 = {<span class="nu">10.0f</span>, <span class="nu">5.0f</span>, <span class="nu">2.0f</span>};
+<span class="kw">uniform</span> <span class="ty">float</span>&lt;<span class="nu">3</span>&gt; mid = <span class="fn">lerp</span>&lt;<span class="ty">float</span>, <span class="nu">3</span>&gt;(p0, p1, <span class="nu">0.5f</span>);
+<span class="cm">// mid = {5.0, 2.5, 1.0}</span><span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 26 — PERFORMANCE GUIDE
+════════════════════════════════════════════════════ -->
+<section id="ch26">
+<h2><span class="ch">26</span> Performance Guide — Thinking Like the Compiler</h2>
+
+<p>Here we tie together everything we've learned into a systematic approach to writing fast ISPC code. Each guideline comes with a <em>why</em> — not just a rule to memorize.</p>
+
+<h3>1. Use foreach for all data-parallel loops — never manually scatter work</h3>
+
+<p><code>foreach</code> guarantees correct tail handling (when N isn't divisible by the gang width), generates optimal loop bounds, and is the loop form the compiler understands best. Manual loops with <code>programIndex</code> are fragile and harder to optimize.</p>
+
+<h3>2. Mark everything uniform that you can — it's "free" information</h3>
+
+<p>Every <code>uniform</code> annotation tells the compiler "this value is the same in all 8 lanes." That information unlocks optimizations:</p>
+<ul>
+  <li>Uniform conditions → simple branches instead of masked execution</li>
+  <li>Uniform indices → sequential loads instead of gathers</li>
+  <li>Uniform loop bounds → the compiler knows the exact trip count</li>
+</ul>
+
+<p>The compiler will warn you if you try to use something as uniform when it can't guarantee it is, so you won't accidentally break correctness by over-annotating.</p>
+
+<h3>3. Structure data as SOA (or soa&lt;N&gt;) for array-of-struct access</h3>
+
+<p>This is the single most impactful structural change you can make. It converts gathers (8 cache misses) into sequential loads (1 instruction). A well-tuned SOA layout often provides 2–4× speedup over AOS even when everything else is optimized.</p>
+
+<h3>4. Use cif / cfor / cwhile when divergence is unlikely</h3>
+
+<p>If you're writing a particle system and 99% of particles are active, the condition "is this particle alive?" will be true for all 8 lanes in most gangs. Use <code>cif</code> — at the cost of a single mask-check instruction, you get fully unmasked execution for the common case.</p>
+
+<h3>5. Minimize cross-lane operations in hot paths</h3>
+
+<p>Shuffle, rotate, and broadcast require special SIMD instructions that have higher latency than simple arithmetic. In inner loops, redesign your algorithm to avoid needing neighbor data across lanes, or restructure the data so neighbors are in sequential lanes (and therefore load together naturally).</p>
+
+<h3>6. Use packed_store_active for compaction (not a scatter)</h3>
+
+<p>A common pattern: "write only elements that pass a filter to a compact output buffer." The wrong way is a scatter (<code>output[varying_idx] = val</code>). The right way uses <code>packed_store_active</code>:</p>
+
+<pre><span class="kw">uniform</span> <span class="ty">int</span> out_idx = <span class="nu">0</span>;   <span class="cm">// uniform write cursor</span>
+
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> val = data[i];
+    <span class="kw">if</span> (val &gt; threshold) {
+        <span class="cm">// packed_store_active writes only the active lanes' values,</span>
+        <span class="cm">// compacted contiguously into output[out_idx...]</span>
+        <span class="cm">// Returns the number of values written</span>
+        <span class="kw">uniform</span> <span class="ty">int</span> n_written = <span class="fn">packed_store_active</span>(&amp;output[out_idx], val);
+        out_idx += n_written;
+    }
+}
+<span class="cm">// output[0 .. out_idx-1] now holds the filtered values, no gaps</span><span class="lang-tag">ispc</span></pre>
+
+<h3>7. Reduce redundant loads — load once, use many times</h3>
+
+<pre><span class="cm">// BAD: loads data[i] twice from memory</span>
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    output1[i] = data[i] * <span class="nu">2.0f</span>;
+    output2[i] = data[i] + <span class="nu">1.0f</span>;
+}
+
+<span class="cm">// GOOD: load once, use twice</span>
+<span class="kw">foreach</span> (i = <span class="nu">0</span> ... N) {
+    <span class="ty">float</span> v = data[i];    <span class="cm">// one SIMD load</span>
+    output1[i] = v * <span class="nu">2.0f</span>;
+    output2[i] = v + <span class="nu">1.0f</span>;
+}<span class="lang-tag">ispc</span></pre>
+
+<h3>8. Profile before optimizing</h3>
+
+<p>Use ISPC's <code>--emit-asm</code> flag to inspect the generated assembly. Look for:</p>
+<ul>
+  <li><code>vgatherdps</code> / <code>vscatterdps</code> — gather/scatter instructions (potentially slow)</li>
+  <li><code>vmovaps</code> / <code>vmovups</code> — aligned/unaligned sequential SIMD loads (fast)</li>
+  <li>Masked operations (instructions with <code>k1</code> mask register in AVX-512) — check if they're in hot paths</li>
+</ul>
+
+<pre>ispc mykernel.ispc --target=avx2-i32x8 --emit-asm -o mykernel.s
+grep -n "gather\|scatter\|vmovaps" mykernel.s<span class="lang-tag">bash</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 27 — NEW IN v1.28–1.30
+════════════════════════════════════════════════════ -->
+<section id="ch27">
+<h2><span class="ch">27</span> New Features in ISPC 1.28 – 1.30</h2>
+
+<h3>ISPC 1.30: Intel AMX support</h3>
+
+<p>AMX (Advanced Matrix Extensions) is a hardware feature in Sapphire Rapids, Granite Rapids, and later Intel CPUs that provides dedicated matrix multiply-accumulate hardware. Think of it like a GPU tensor core built into a CPU core. ISPC 1.30 exposes it through a standard library header:</p>
+
+<pre><span class="pp">#include</span> <span class="st">"amx.isph"</span>   <span class="cm">// only included when target supports AMX</span>
+
+<span class="cm">// AMX works with "tiles" — small 2D register files</span>
+<span class="cm">// Each tile can hold a 16×64 byte matrix (e.g., 16×16 BF16 values)</span>
+
+<span class="cm">// Configure the tile dimensions</span>
+amx_tile_config cfg;
+<span class="fn">amx_tile_config_set_dims</span>(&amp;cfg, <span class="cm">/*rows*/</span><span class="nu">16</span>, <span class="cm">/*cols_bytes*/</span><span class="nu">64</span>);
+<span class="fn">amx_ldtilecfg</span>(&amp;cfg);
+
+<span class="cm">// Load two input matrices into tile registers</span>
+<span class="fn">amx_tile_loadd_t0</span>(matA_ptr, matA_stride);
+<span class="fn">amx_tile_loadd_t1</span>(matB_ptr, matB_stride);
+
+<span class="cm">// Compute: tile_result += tile_A × tile_B  (BF16 inputs → float32 output)</span>
+<span class="fn">amx_tdpbf16ps</span>(TILE_RESULT, TILE_A, TILE_B);
+
+<span class="cm">// Store result</span>
+<span class="fn">amx_tile_stored_t2</span>(result_ptr, result_stride);<span class="lang-tag">ispc</span></pre>
+
+<p>AMX is only available on AVX-512 SPR, GNR, and AVX10.2DMR targets. For other targets, this code won't compile — use preprocessor guards:</p>
+
+<pre><span class="pp">#ifdef ISPC_TARGET_AVX512SPR</span>
+    <span class="fn">amx_tdpbf16ps</span>(TILE_C, TILE_A, TILE_B);  <span class="cm">// Hardware AMX</span>
+<span class="pp">#else</span>
+    <span class="fn">fallback_matmul</span>(C, A, B);               <span class="cm">// Scalar fallback</span>
+<span class="pp">#endif</span><span class="lang-tag">ispc</span></pre>
+
+<h3>ISPC 1.29: Profile-guided optimization</h3>
+
+<p>PGO uses runtime data (actual program execution) to guide the compiler's optimization decisions. Hot paths get more aggressive optimization; cold paths get smaller code. In v1.29:</p>
+
+<pre><span class="cm"># Step 1: compile with debug info for profiling</span>
+ispc mykernel.ispc --sample-profiling-debug-info -o mykernel_prof.o
+
+<span class="cm"># Step 2: run the program and collect profile data using Linux perf</span>
+perf record -e cycles:u -g ./my_program
+perf script | create_llvm_prof --binary=my_program --out=profile.afdo
+
+<span class="cm"># Step 3: recompile using the profile — can give 5-60% speedup</span>
+ispc mykernel.ispc \
+    --profile-sample-use=profile.afdo \
+    -O3 \
+    --target=avx2-i32x8 \
+    -o mykernel_optimized.o<span class="lang-tag">bash</span></pre>
+
+<h3>ISPC 1.29: Stack Smash Protection</h3>
+
+<p>Stack canaries detect buffer overflows — useful for security-sensitive ISPC code:</p>
+
+<pre>ispc mykernel.ispc --stack-protector=strong -o mykernel.o
+<span class="cm"># --stack-protector       = protects functions with detectable vulnerabilities</span>
+<span class="cm"># --stack-protector=strong = protects functions with any array or address-taken local</span>
+<span class="cm"># --stack-protector=all   = protects every function</span><span class="lang-tag">bash</span></pre>
+
+<h3>ISPC 1.28: Python bindings via nanobind</h3>
+
+<p>ISPC 1.28 can auto-generate Python bindings, letting you call ISPC kernels directly from Python with NumPy arrays:</p>
+
+<pre><span class="cm"># Compile with Python wrapper generation</span>
+ispc mykernel.ispc \
+    --nanobind-wrapper=mykernel_nb.cpp \
+    --target=avx2-i32x8 \
+    -o mykernel.o<span class="lang-tag">bash</span></pre>
+
+<pre><span class="cm"># setup.py (simplified)</span>
+<span class="kw">import</span> nanobind
+<span class="kw">from</span> setuptools <span class="kw">import</span> setup
+<span class="kw">from</span> nanobind.setuptools_helpers <span class="kw">import</span> NanobindExtension
+
+setup(name=<span class="st">"mykernel"</span>, ext_modules=[
+    NanobindExtension(<span class="st">"mykernel"</span>, sources=[<span class="st">"mykernel_nb.cpp"</span>],
+                      extra_objects=[<span class="st">"mykernel.o"</span>])
+])<span class="lang-tag">Python</span></pre>
+
+<pre><span class="cm"># Python usage</span>
+<span class="kw">import</span> mykernel
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+data = np.random.rand(<span class="nu">1024</span>).astype(np.float32)
+result = np.zeros_like(data)
+mykernel.fast_sqrt(data, result, <span class="nu">1024</span>)  <span class="cm"># calls ISPC SIMD kernel from Python</span><span class="lang-tag">Python</span></pre>
+
+<h3>ISPC 1.28: Struct operator overloading extended</h3>
+
+<p>v1.28 greatly extended operator overloading to cover all standard C++ operators including unary operators, assignment operators, and comparison operators:</p>
+
+<pre><span class="kw">struct</span> Vec3 { <span class="ty">float</span> x, y, z; };
+
+<span class="cm">// Unary</span>
+<span class="kw">inline</span> Vec3 <span class="kw">operator</span>-(Vec3 a) { Vec3 r; r.x=-a.x; r.y=-a.y; r.z=-a.z; <span class="kw">return</span> r; }
+
+<span class="cm">// Compound assignment</span>
+<span class="kw">inline</span> Vec3&amp; <span class="kw">operator</span>+=(Vec3&amp; a, Vec3 b) { a.x+=b.x; a.y+=b.y; a.z+=b.z; <span class="kw">return</span> a; }
+
+<span class="cm">// Equality</span>
+<span class="kw">inline</span> <span class="ty">bool</span> <span class="kw">operator</span>==(Vec3 a, Vec3 b) {
+    <span class="kw">return</span> a.x==b.x &amp;&amp; a.y==b.y &amp;&amp; a.z==b.z;
+}
+
+<span class="cm">// Usage</span>
+Vec3 v = {<span class="nu">1</span>, <span class="nu">2</span>, <span class="nu">3</span>};
+Vec3 neg = -v;            <span class="cm">// {-1, -2, -3}</span>
+v += {<span class="nu">10</span>, <span class="nu">10</span>, <span class="nu">10</span>};       <span class="cm">// v = {11, 12, 13}</span><span class="lang-tag">ispc</span></pre>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     CHAPTER 28 — FULL EXAMPLE: MANDELBROT
+════════════════════════════════════════════════════ -->
+<section id="ch28">
+<h2><span class="ch">28</span> Full Example — Mandelbrot Set with Tasks</h2>
+
+<p>Let's build a complete, optimized Mandelbrot set renderer that uses both SIMD parallelism (via gangs) and multi-core parallelism (via tasks). This example demonstrates divergent control flow — different pixels need different iteration counts — which is where ISPC's masked execution shines.</p>
+
+<h3>Why Mandelbrot is a great ISPC example</h3>
+
+<p>The Mandelbrot set is defined by: starting from z=0, repeatedly apply z = z² + c, and count how many iterations before |z| > 2. If it never escapes, the point is "in" the set.</p>
+
+<p>The challenge: different pixels escape at completely different iteration counts. Some escape after 2 iterations, some take 1000. This means the "while" loop has a highly <em>varying</em> exit condition — different lanes are done at different times. In scalar code, this is fine. In SIMD, lanes that finish early stay masked until all 8 are done. ISPC handles this automatically and efficiently.</p>
+
+<h4>mandelbrot.ispc</h4>
+<pre><span class="cm">// Task function: each task renders a horizontal band of the image</span>
+<span class="kw">task</span> <span class="ty">void</span> <span class="fn">mandelbrot_band</span>(
+    <span class="kw">uniform</span> <span class="ty">float</span>  x0,     <span class="cm">// left  edge of complex plane view</span>
+    <span class="kw">uniform</span> <span class="ty">float</span>  y0,     <span class="cm">// top   edge</span>
+    <span class="kw">uniform</span> <span class="ty">float</span>  dx,     <span class="cm">// pixels per unit in x</span>
+    <span class="kw">uniform</span> <span class="ty">float</span>  dy,     <span class="cm">// pixels per unit in y</span>
+    <span class="kw">uniform</span> <span class="ty">int</span>    width,
+    <span class="kw">uniform</span> <span class="ty">int</span>    height,
+    <span class="kw">uniform</span> <span class="ty">int</span>    maxIter,
+    <span class="kw">uniform</span> <span class="ty">int</span>    output[])  <span class="cm">// flat array: output[row * width + col]</span>
+{
+    <span class="cm">// Divide rows evenly among tasks</span>
+    <span class="kw">uniform</span> <span class="ty">int</span> row_start = (taskIndex * height) / taskCount;
+    <span class="kw">uniform</span> <span class="ty">int</span> row_end   = ((taskIndex+<span class="nu">1</span>) * height) / taskCount;
+
+    <span class="kw">foreach</span> (row = row_start ... row_end, col = <span class="nu">0</span> ... width) {
+        <span class="cm">// Convert pixel (col, row) to complex number (cr, ci)</span>
+        <span class="ty">float</span> cr = x0 + col * dx;
+        <span class="ty">float</span> ci = y0 + row * dy;
+
+        <span class="cm">// Mandelbrot iteration</span>
+        <span class="ty">float</span> zr = cr, zi = ci;
+        <span class="ty">int</span>   iter = <span class="nu">0</span>;
+
+        <span class="cm">// Loop condition is varying: different lanes exit at different times</span>
+        <span class="cm">// ISPC automatically manages the execution mask</span>
+        <span class="cm">// cwhile: likely most lanes agree when far from the boundary</span>
+        <span class="kw">cwhile</span> (iter &lt; maxIter &amp;&amp; zr*zr + zi*zi &lt; <span class="nu">4.0f</span>) {
+            <span class="ty">float</span> new_zr = zr*zr - zi*zi + cr;
+            zi = <span class="nu">2.0f</span> * zr * zi + ci;
+            zr = new_zr;
+            iter++;
+        }
+
+        <span class="cm">// Each lane writes its own iteration count</span>
+        output[row * width + col] = iter;
+    }
+}
+
+<span class="cm">// Entry point from C++</span>
+<span class="kw">export</span> <span class="ty">void</span> <span class="fn">render_mandelbrot</span>(
+    <span class="kw">uniform</span> <span class="ty">float</span> x0, <span class="kw">uniform</span> <span class="ty">float</span> y0,
+    <span class="kw">uniform</span> <span class="ty">float</span> x1, <span class="kw">uniform</span> <span class="ty">float</span> y1,
+    <span class="kw">uniform</span> <span class="ty">int</span>   width, <span class="kw">uniform</span> <span class="ty">int</span> height,
+    <span class="kw">uniform</span> <span class="ty">int</span>   maxIter,
+    <span class="kw">uniform</span> <span class="ty">int</span>   output[])
+{
+    <span class="kw">uniform</span> <span class="ty">float</span> dx = (x1 - x0) / width;
+    <span class="kw">uniform</span> <span class="ty">float</span> dy = (y1 - y0) / height;
+
+    <span class="cm">// Launch one task per logical CPU core (adjust numTasks to your machine)</span>
+    <span class="kw">uniform</span> <span class="ty">int</span> numTasks = <span class="nu">8</span>;
+    <span class="kw">launch</span>[numTasks] <span class="fn">mandelbrot_band</span>(x0, y0, dx, dy, width, height, maxIter, output);
+    <span class="kw">sync</span>;
+}<span class="lang-tag">ispc</span></pre>
+
+<h4>main.cpp</h4>
+<pre><span class="pp">#include</span> <span class="st">&lt;cstdlib&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;cstdio&gt;</span>
+<span class="pp">#include</span> <span class="st">"mandelbrot_ispc.h"</span>
+
+<span class="ty">void</span> <span class="fn">write_ppm</span>(<span class="kw">const char</span>* filename, <span class="kw">const int</span>* data, <span class="ty">int</span> W, <span class="ty">int</span> H, <span class="ty">int</span> maxIter);
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="kw">const int</span> W = <span class="nu">1920</span>, H = <span class="nu">1080</span>;
+    <span class="kw">const int</span> maxIter = <span class="nu">1000</span>;
+
+    <span class="ty">int</span>* output = (<span class="ty">int</span>*)<span class="fn">aligned_alloc</span>(<span class="nu">64</span>, W * H * <span class="kw">sizeof</span>(<span class="ty">int</span>));
+
+    <span class="cm">// View: classic Mandelbrot region</span>
+    ispc::<span class="fn">render_mandelbrot</span>(
+        <span class="nu">-2.5f</span>, <span class="nu">-1.0f</span>,   <span class="cm">// x0, y0 (top-left of view)</span>
+         <span class="nu">1.0f</span>,  <span class="nu">1.0f</span>,   <span class="cm">// x1, y1 (bottom-right)</span>
+        W, H, maxIter, output
+    );
+
+    <span class="fn">write_ppm</span>(<span class="st">"mandelbrot.ppm"</span>, output, W, H, maxIter);
+    <span class="fn">printf</span>(<span class="st">"Rendered %dx%d Mandelbrot to mandelbrot.ppm\n"</span>, W, H);
+
+    <span class="fn">free</span>(output);
+}<span class="lang-tag">C++</span></pre>
+
+<h4>Compile and run</h4>
+<pre><span class="cm"># Compile ISPC kernel for AVX2 (multi-target for distribution)</span>
+ispc mandelbrot.ispc \
+    --target=sse4-i32x4,avx2-i32x8,avx512skx-x16 \
+    -o mandelbrot_ispc.o \
+    -h mandelbrot_ispc.h \
+    -O2
+
+<span class="cm"># Compile C++ and link with tasksys</span>
+g++ -O2 main.cpp mandelbrot_ispc.o ispc/examples/common/tasksys.cpp \
+    -o mandelbrot -lpthread
+
+<span class="cm"># Run</span>
+./mandelbrot
+<span class="cm"># Expected speedup vs scalar C: ~15-20× on AVX2 + 8 cores</span><span class="lang-tag">bash</span></pre>
+
+<h3>Understanding the performance</h3>
+
+<p>On a machine with 8 cores and AVX2 (8-wide SIMD), the theoretical speedup over scalar single-core is 8 (cores) × 8 (SIMD lanes) = 64×. In practice, the Mandelbrot set has high divergence near the boundary (different pixels take very different iteration counts), so SIMD efficiency is maybe 50–70% there. But pixels away from the boundary are either all inside (all reach maxIter) or all outside (all escape quickly), giving 100% SIMD efficiency. Overall, 15–25× real-world speedup is typical.</p>
+
+<div class="box box-tip">
+  <span class="box-title">💡 Next steps</span>
+  <p>From here, explore the ISPC examples directory in the GitHub repository — it includes ray tracers, volume renderers, options pricing, and image processing kernels, all with full source. The ISPC user guide at <a href="https://ispc.github.io/ispc.html">ispc.github.io/ispc.html</a> has the authoritative reference for every language feature.</p>
+</div>
+
+</section>
+
+<!-- FOOTER -->
+<section style="border-top:1px solid var(--border); padding-top:36px; margin-top:0; margin-bottom:0;">
+  <p style="color:var(--text-dim); font-size:13px; line-height:1.8;">
+    <strong style="color:var(--text)">Official resources:</strong>
+    <a href="https://ispc.github.io/ispc.html">ISPC User's Guide</a> ·
+    <a href="https://github.com/ispc/ispc/releases">GitHub Releases</a> ·
+    <a href="https://github.com/ispc/ispc/tree/main/examples">Examples on GitHub</a> ·
+    <a href="https://github.com/ispc/ispc/discussions">Community Forum</a>
+  </p>
+  <p style="color:var(--text-dim); font-size:12px; margin-top:8px;">
+    Based on ISPC v1.30.0 · LLVM 19 backend · Compiled March 2026
+  </p>
+</section>
+
+</main>
+</div>
+
+<script>
+// Sidebar active link highlighting on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks  = document.querySelectorAll('nav a');
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px' });
+
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

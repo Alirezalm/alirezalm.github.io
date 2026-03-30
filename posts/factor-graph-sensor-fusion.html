@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factor Graph Optimization &amp; Sensor Fusion — Complete Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #0d0f17;
+    --surface: #12151f;
+    --surface2: #181c28;
+    --surface3: #1e2335;
+    --border: #252c40;
+    --accent: #5b9cf6;
+    --accent2: #8b6cf7;
+    --accent3: #3ecfb0;
+    --warn: #f5c542;
+    --danger: #f56565;
+    --text: #c8d3ee;
+    --text-dim: #606880;
+    --text-bright: #eef2ff;
+    --code-bg: #080a10;
+    --sidebar-w: 300px;
+    --content-max: 840px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 15.5px;
+  }
+
+  .layout { display: flex; min-height: 100vh; }
+
+  nav {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 0 0 60px;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .nav-brand {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+  .nav-brand .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.3px;
+  }
+  .nav-brand .back-links { display: flex; gap: 12px; margin-top: 10px; }
+  .nav-brand .back-links a {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .nav-brand .back-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .nav-section-label {
+    padding: 14px 20px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  nav a.nav-item {
+    display: block;
+    padding: 5px 20px 5px 26px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 12.5px;
+    border-left: 2px solid transparent;
+    transition: all 0.12s;
+    line-height: 1.5;
+  }
+  nav a.nav-item:hover { color: var(--text-bright); background: rgba(91,156,246,0.05); border-left-color: var(--border); }
+  nav a.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(91,156,246,0.08); }
+
+  main {
+    margin-left: var(--sidebar-w);
+    padding: 0 56px 100px 56px;
+    max-width: calc(var(--sidebar-w) + var(--content-max) + 112px);
+    width: 100%;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 64px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 64px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(91,156,246,0.1);
+    border: 1px solid rgba(91,156,246,0.25);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: var(--text-bright);
+    line-height: 1.12;
+    letter-spacing: -1.5px;
+    margin-bottom: 18px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 640px;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+  .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .hero-tags span {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #7a8aaa;
+    font-size: 11.5px;
+    padding: 4px 11px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .hero-meta { display: flex; gap: 24px; font-size: 12.5px; color: var(--text-dim); }
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+  .part-badge {
+    display: inline-block;
+    background: rgba(139,108,247,0.15);
+    border: 1px solid rgba(139,108,247,0.3);
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 12px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+
+  /* SECTIONS */
+  section { margin-bottom: 80px; scroll-margin-top: 28px; }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 27px;
+    font-weight: 800;
+    color: var(--text-bright);
+    letter-spacing: -0.8px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2 .ch {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    background: rgba(91,156,246,0.1);
+    border: 1px solid rgba(91,156,246,0.2);
+    padding: 2px 9px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin: 40px 0 14px;
+    letter-spacing: -0.3px;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent3);
+    margin: 28px 0 10px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  p { margin-bottom: 16px; }
+  p:last-child { margin-bottom: 0; }
+
+  strong { color: var(--text-bright); font-weight: 600; }
+  em { color: var(--accent3); font-style: normal; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* CODE */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    overflow-x: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 24px 0;
+    position: relative;
+  }
+  .code-label {
+    position: absolute;
+    top: 10px; right: 14px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .kw  { color: #c792ea; }
+  .ty  { color: #82aaff; }
+  .fn  { color: #82aaff; }
+  .st  { color: #c3e88d; }
+  .nu  { color: #f78c6c; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .pp  { color: #f78c6c; }
+  .op  { color: var(--accent3); }
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: rgba(91,156,246,0.1);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* MATH */
+  .eq {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 24px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--text-bright);
+    overflow-x: auto;
+    line-height: 2;
+  }
+  .eq .eq-comment {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-style: italic;
+    display: block;
+    margin-top: 6px;
+  }
+  .eq .eq-row { display: block; margin-bottom: 4px; }
+  .eq .eq-label {
+    float: right;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: 20px;
+  }
+  .mi {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text-bright);
+    background: rgba(255,255,255,0.04);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* INFO BOXES */
+  .box {
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 24px 0;
+    border: 1px solid;
+  }
+  .box-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .box-info   { background: rgba(91,156,246,0.07); border-color: rgba(91,156,246,0.25); }
+  .box-info   .box-title { color: var(--accent); }
+  .box-tip    { background: rgba(62,207,176,0.07); border-color: rgba(62,207,176,0.25); }
+  .box-tip    .box-title { color: var(--accent3); }
+  .box-warn   { background: rgba(245,197,66,0.07); border-color: rgba(245,197,66,0.25); }
+  .box-warn   .box-title { color: var(--warn); }
+  .box-analogy { background: rgba(139,108,247,0.07); border-color: rgba(139,108,247,0.25); }
+  .box-analogy .box-title { color: var(--accent2); }
+
+  /* DIAGRAMS */
+  .diagram {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 28px 0;
+    overflow-x: auto;
+  }
+  .diagram-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; margin: 24px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th {
+    background: var(--surface3);
+    color: var(--text-bright);
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-size: 13px;
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(91,156,246,0.04); }
+  td code { font-size: 12px; }
+
+  /* STEP LIST */
+  .steps { list-style: none; margin: 20px 0; }
+  .steps li {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    background: rgba(91,156,246,0.15);
+    border: 1px solid rgba(91,156,246,0.3);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+
+  /* GRID */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 20px 0; }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .stat-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .stat-card .sub { font-size: 12.5px; color: var(--text-dim); }
+
+  /* BATCH NAV */
+  .batch-nav {
+    display: flex;
+    gap: 12px;
+    margin-top: 60px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .batch-nav a {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .batch-nav a:hover { border-color: var(--accent); background: rgba(91,156,246,0.06); }
+  .batch-nav .dir { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .batch-nav .title { font-size: 14px; color: var(--text-bright); font-weight: 600; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { display: none; }
+    main { margin-left: 0; padding: 20px 24px 80px; }
+    .hero h1 { font-size: 32px; }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══════════════════════ SIDEBAR NAV ═══════════════════════ -->
+<nav>
+  <div class="nav-brand">
+    <div class="logo">Factor Graphs &amp; Sensor Fusion</div>
+    <div class="back-links">
+      <a href="../index.html">Home</a>
+      <a href="../blog.html">Blog</a>
+    </div>
+  </div>
+
+  <div class="nav-section-label">Part 1 — Foundations</div>
+  <a href="#ch1" class="nav-item">01 · The State Estimation Problem</a>
+  <a href="#ch2" class="nav-item">02 · Probabilistic Foundations</a>
+  <a href="#ch3" class="nav-item">03 · Graphical Models</a>
+  <a href="#ch4" class="nav-item">04 · Factor Graph Formalism</a>
+  <a href="#ch5" class="nav-item">05 · Nonlinear Least Squares</a>
+  <a href="#ch6" class="nav-item">06 · Solving the Linear System</a>
+  <a href="#ch7" class="nav-item">07 · Lie Groups &amp; Manifolds</a>
+
+  <div class="nav-section-label" style="margin-top:16px;">Part 2 — Sensor Fusion</div>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">08 · IMU Sensor Model →</a>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">09 · IMU Preintegration →</a>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">10 · GNSS Sensor Model →</a>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">11 · Factor Types →</a>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">12 · Full Pipeline →</a>
+  <a href="factor-graph-sensor-fusion-2.html" class="nav-item" style="color: var(--text-dim); opacity:0.5;">13 · GTSAM Code →</a>
+</nav>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="part-badge">Part 1 of 2</div>
+  <div class="hero-badge">Complete Reference · From Scratch · GNSS/IMU Fusion</div>
+  <h1>Factor Graph Optimization<br>&amp; <em>Sensor Fusion</em></h1>
+  <p class="hero-desc">Everything you need to understand factor graph optimization from first principles: probabilistic estimation theory, graphical model foundations, nonlinear least squares, numerical linear algebra, and the Lie group mathematics required for 3D rotation handling. Part 2 applies all of this to a real GNSS/IMU fusion pipeline.</p>
+  <div class="hero-tags">
+    <span>MAP Estimation</span>
+    <span>Factor Graphs</span>
+    <span>Nonlinear Least Squares</span>
+    <span>Gauss-Newton / LM</span>
+    <span>iSAM2</span>
+    <span>SO(3) / SE(3)</span>
+    <span>GTSAM</span>
+  </div>
+  <div class="hero-meta">
+    <span>📅 March 30, 2026</span>
+    <span>⏱ 75 min — Part 1</span>
+    <span>✍ Alireza Olama</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 1 — STATE ESTIMATION PROBLEM
+════════════════════════════════════════════════════════ -->
+<section id="ch1">
+<h2><span class="ch">01</span> The State Estimation Problem</h2>
+
+<p>Before any equations, let us understand what problem we are actually solving. A robot, autonomous vehicle, or any mobile platform needs to know <strong>where it is</strong>, <strong>how fast it is moving</strong>, and <strong>how it is oriented</strong> in the world. Together these constitute the <strong>state</strong> — a vector that fully describes the relevant aspects of the system at a point in time.</p>
+
+<p>The state is never directly observable. Sensors give us noisy, partial, and sometimes inconsistent glimpses of reality. A GPS receiver outputs a position with meter-level uncertainty. An IMU measures acceleration and angular velocity but accumulates error over time. A camera sees the world but cannot directly tell you your latitude. The goal of state estimation is to combine all available sensor data — with their known noise characteristics — to compute the best possible estimate of the state.</p>
+
+<h3>What makes this hard?</h3>
+
+<p>Three fundamental difficulties arise:</p>
+
+<ul class="steps">
+  <li><span class="step-num">1</span><div><strong>Nonlinearity.</strong> The relationship between state and sensor measurement is rarely linear. IMU integration involves multiplying velocity by time and rotating acceleration vectors. GNSS pseudorange depends on the Euclidean distance between satellite and receiver. These nonlinearities prevent closed-form solutions in general.</div></li>
+  <li><span class="step-num">2</span><div><strong>Noise on a manifold.</strong> Orientation — which is part of the state — does not live in Euclidean space. Rotations belong to the special orthogonal group SO(3), a curved manifold. Standard addition does not apply; you cannot write <code>R_new = R_old + δ</code>. This requires special mathematical machinery.</div></li>
+  <li><span class="step-num">3</span><div><strong>Scale.</strong> A practical GNSS/IMU system runs for minutes to hours. At 200 Hz IMU and 10 Hz GNSS, that is tens of thousands of state variables coupled by hundreds of thousands of measurements. Naïve matrix operations are computationally impossible; we need structure-exploiting algorithms.</div></li>
+</ul>
+
+<h3>Two estimation paradigms: filtering vs. smoothing</h3>
+
+<p>Historically, two philosophies have emerged for handling temporal state estimation:</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Aspect</th><th>Filtering (EKF, UKF)</th><th>Smoothing (Factor Graphs)</th></tr></thead>
+  <tbody>
+    <tr><td>Data used</td><td>Only current + past (online)</td><td>All data, past and future</td></tr>
+    <tr><td>Estimate</td><td>Marginal posterior p(x<sub>k</sub> | z<sub>1:k</sub>)</td><td>Full joint posterior p(x<sub>1:k</sub> | z<sub>1:k</sub>)</td></tr>
+    <tr><td>Memory</td><td>O(n²) — state covariance only</td><td>O(n) sparse — full history</td></tr>
+    <tr><td>Loop closures</td><td>Expensive, approximate</td><td>Natural, exact</td></tr>
+    <tr><td>Accuracy</td><td>Good for linear/near-linear</td><td>Optimal under correct model</td></tr>
+    <tr><td>Latency</td><td>Zero (online)</td><td>Fixed-lag or batch</td></tr>
+    <tr><td>Use case</td><td>Real-time control, resource-constrained</td><td>Offline, post-processing, SLAM</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The Extended Kalman Filter (EKF) has dominated robotics since the 1990s due to its simplicity and low memory footprint. It works by maintaining only the current state estimate and its covariance, updating them as new measurements arrive. The cost is that it discards all past information except through its summarized covariance — an approximation that loses accuracy over time, especially in nonlinear systems.</p>
+
+<p>Factor graph smoothing keeps <em>every</em> state variable and every measurement in a graph simultaneously, then finds the global maximum a posteriori (MAP) estimate over the full trajectory. This is more accurate because: (a) future measurements can retroactively improve past estimates, (b) loop closures in SLAM are handled exactly, and (c) the global optimization is not prone to linearization errors that accumulate in the EKF. Modern implementations (iSAM2, GTSAM) make this computationally feasible by exploiting the sparse structure of the graph.</p>
+
+<h3>Why GNSS + IMU?</h3>
+
+<div class="grid2">
+  <div class="stat-card">
+    <div class="label">GNSS alone</div>
+    <div class="value" style="font-size:18px; color:var(--warn);">1–10 Hz</div>
+    <div class="sub">Absolute position, drifts with multipath and signal loss. Cannot provide orientation or velocity directly. Fails indoors, under bridges, in urban canyons.</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">IMU alone</div>
+    <div class="value" style="font-size:18px; color:var(--warn);">100–1000 Hz</div>
+    <div class="sub">High-rate relative motion. Gravity reference gives roll/pitch. But integration error grows unboundedly — position error is cubic in time without correction.</div>
+  </div>
+</div>
+
+<p>Together, GNSS and IMU are complementary: GNSS gives absolute position at low rate; IMU gives high-rate motion with bounded but growing error. A factor graph can fuse them optimally — the GNSS factors anchor the trajectory globally while the IMU preintegration factors provide tight high-frequency constraints between keyframes.</p>
+
+<h3>The full pipeline — preview</h3>
+
+<div class="diagram">
+  <div class="diagram-title">GNSS/IMU Fusion Pipeline Overview</div>
+  <svg viewBox="0 0 760 120" font-family="IBM Plex Mono, monospace" font-size="11">
+    <!-- boxes -->
+    <rect x="10"  y="30" width="100" height="44" rx="6" fill="#1e2335" stroke="#252c40"/>
+    <rect x="150" y="30" width="110" height="44" rx="6" fill="#1e2335" stroke="#252c40"/>
+    <rect x="310" y="30" width="120" height="44" rx="6" fill="#1e2335" stroke="#252c40"/>
+    <rect x="480" y="30" width="120" height="44" rx="6" fill="#1e2335" stroke="#252c40"/>
+    <rect x="650" y="30" width="100" height="44" rx="6" fill="#1e2335" stroke="#252c40"/>
+    <!-- arrow lines -->
+    <line x1="110" y1="52" x2="148" y2="52" stroke="#252c40" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="260" y1="52" x2="308" y2="52" stroke="#252c40" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="430" y1="52" x2="478" y2="52" stroke="#252c40" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="600" y1="52" x2="648" y2="52" stroke="#252c40" stroke-width="1.5" marker-end="url(#arr)"/>
+    <defs>
+      <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L6,3 z" fill="#252c40"/>
+      </marker>
+    </defs>
+    <!-- labels -->
+    <text x="60"  y="49" text-anchor="middle" fill="#5b9cf6">Raw</text>
+    <text x="60"  y="63" text-anchor="middle" fill="#5b9cf6">Sensors</text>
+    <text x="205" y="49" text-anchor="middle" fill="#c8d3ee">Pre-</text>
+    <text x="205" y="63" text-anchor="middle" fill="#c8d3ee">processing</text>
+    <text x="370" y="49" text-anchor="middle" fill="#c8d3ee">Graph</text>
+    <text x="370" y="63" text-anchor="middle" fill="#c8d3ee">Construction</text>
+    <text x="540" y="49" text-anchor="middle" fill="#c8d3ee">Optimization</text>
+    <text x="540" y="63" text-anchor="middle" fill="#c8d3ee">(MAP)</text>
+    <text x="700" y="49" text-anchor="middle" fill="#3ecfb0">Trajectory</text>
+    <text x="700" y="63" text-anchor="middle" fill="#3ecfb0">+ Covariance</text>
+    <!-- sub-labels -->
+    <text x="60"  y="90" text-anchor="middle" fill="#606880" font-size="9">GNSS, IMU</text>
+    <text x="205" y="90" text-anchor="middle" fill="#606880" font-size="9">IMU integ, synch</text>
+    <text x="370" y="90" text-anchor="middle" fill="#606880" font-size="9">Nodes + factors</text>
+    <text x="540" y="90" text-anchor="middle" fill="#606880" font-size="9">Gauss-Newton/LM</text>
+    <text x="700" y="90" text-anchor="middle" fill="#606880" font-size="9">Pose, vel, bias</text>
+  </svg>
+</div>
+
+<p>Part 1 of this guide builds all the mathematical machinery needed to understand the optimization block (Chapters 2–7). Part 2 fills in the sensor models and assembles the full pipeline with working code.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 2 — PROBABILISTIC FOUNDATIONS
+════════════════════════════════════════════════════════ -->
+<section id="ch2">
+<h2><span class="ch">02</span> Probabilistic Foundations</h2>
+
+<p>Factor graph optimization is, at its core, Bayesian inference expressed as a least squares problem. To understand <em>why</em> optimization is the right tool, you need to understand the probabilistic reasoning underneath it.</p>
+
+<h3>The Bayesian framework</h3>
+
+<p>We model the unknown state as a random variable <strong>x</strong> and sensor measurements as random variables <strong>z</strong>. We have two pieces of information:</p>
+
+<ul class="steps">
+  <li><span class="step-num">1</span><div><strong>Prior belief p(x):</strong> what we know about the state before seeing any measurements. For the first pose of a trajectory, this is often a delta function (known starting point) or a broad Gaussian (uncertain starting position).</div></li>
+  <li><span class="step-num">2</span><div><strong>Likelihood p(z|x):</strong> the sensor model — given state x, how likely is measurement z? This encodes the noise model of the sensor. A GNSS receiver measuring position with 1 m standard deviation contributes a Gaussian likelihood.</div></li>
+</ul>
+
+<p>Bayes' theorem combines these into the <strong>posterior</strong>:</p>
+
+<div class="eq">
+  <span class="eq-label">(2.1)</span>
+  p(<strong>x</strong> | <strong>z</strong>) = p(<strong>z</strong> | <strong>x</strong>) · p(<strong>x</strong>) / p(<strong>z</strong>)
+  <span class="eq-comment">The denominator p(z) is a constant — it does not depend on x and only serves as a normalizer.</span>
+</div>
+
+<p>The posterior encodes everything we know about x after seeing z. For multiple independent measurements z<sub>1</sub>, …, z<sub>n</sub>, the joint likelihood factorizes:</p>
+
+<div class="eq">
+  p(<strong>x</strong> | z<sub>1</sub>, …, z<sub>n</sub>) ∝ p(<strong>x</strong>) · ∏<sub>i</sub> p(z<sub>i</sub> | <strong>x</strong>)
+</div>
+
+<p>This is the fundamental equation that factor graphs compute. The graph structure makes the product over factors explicit and computationally exploitable.</p>
+
+<h3>Maximum A Posteriori (MAP) estimation</h3>
+
+<p>For continuous state spaces, we cannot enumerate all possibilities. Instead, we find the <strong>single most probable state</strong> — the mode of the posterior. This is the MAP estimate:</p>
+
+<div class="eq">
+  <span class="eq-label">(2.2)</span>
+  <strong>x</strong>* = argmax<sub><strong>x</strong></sub> p(<strong>x</strong> | z<sub>1</sub>, …, z<sub>n</sub>)
+       = argmax<sub><strong>x</strong></sub> p(<strong>x</strong>) · ∏<sub>i</sub> p(z<sub>i</sub> | <strong>x</strong>)
+</div>
+
+<p>Taking the logarithm (which is monotone, so does not change the argmax) and negating (turning maximization into minimization):</p>
+
+<div class="eq">
+  <span class="eq-label">(2.3)</span>
+  <strong>x</strong>* = argmin<sub><strong>x</strong></sub> [ −log p(<strong>x</strong>) − ∑<sub>i</sub> log p(z<sub>i</sub> | <strong>x</strong>) ]
+</div>
+
+<p>This is a scalar function we can minimize with standard optimization tools. The log transformation is crucial: it turns products into sums, exponentials into quadratics, and multiplicative uncertainty into additive cost.</p>
+
+<h3>Gaussian distributions and their log-likelihood</h3>
+
+<p>In almost all sensor fusion problems, we assume <strong>Gaussian noise</strong>. This is motivated by the Central Limit Theorem (many small independent errors sum to Gaussian), mathematical tractability, and practical effectiveness. For a multivariate Gaussian with mean μ and covariance Σ:</p>
+
+<div class="eq">
+  <span class="eq-label">(2.4)</span>
+  p(<strong>x</strong>) = (2π)<sup>−n/2</sup> |Σ|<sup>−1/2</sup> · exp(−½ (<strong>x</strong>−μ)<sup>T</sup> Σ<sup>−1</sup> (<strong>x</strong>−μ))
+</div>
+
+<p>Taking the negative log:</p>
+
+<div class="eq">
+  <span class="eq-label">(2.5)</span>
+  −log p(<strong>x</strong>) = ½ (<strong>x</strong>−μ)<sup>T</sup> Σ<sup>−1</sup> (<strong>x</strong>−μ) + const
+  <span class="eq-comment">The constant (n/2)log(2π) + ½log|Σ| does not depend on x and drops out of the argmin.</span>
+</div>
+
+<p>The expression <span class="mi">‖e‖²<sub>Σ</sub> = e<sup>T</sup> Σ<sup>−1</sup> e</span> is called the <strong>Mahalanobis distance squared</strong>. It generalizes Euclidean distance by scaling each dimension by its uncertainty — a 1 cm error in a 1 mm-precision sensor costs 100× more than in a 10 cm-precision sensor.</p>
+
+<div class="box box-info">
+  <span class="box-title">Why Σ⁻¹, not Σ?</span>
+  <p>The matrix Σ<sup>−1</sup> is the <strong>information matrix</strong> (also called the precision matrix), denoted Ω = Σ<sup>−1</sup>. High confidence (small Σ) means high Ω — the factor contributes strongly to the objective. This is the natural weighting: we trust accurate sensors more. In factor graphs, each factor contributes its information matrix Ω<sub>i</sub> to the Hessian of the cost.</p>
+</div>
+
+<h3>The least squares connection</h3>
+
+<p>Now substitute Gaussian noise models into Equation (2.3). Each measurement factor <span class="mi">p(z<sub>i</sub> | x) = 𝒩(h<sub>i</sub>(x), Σ<sub>i</sub>)</span> where <strong>h<sub>i</sub></strong> is the measurement function (how the state maps to expected measurement). The negative log-likelihood of this factor is:</p>
+
+<div class="eq">
+  −log p(z<sub>i</sub> | <strong>x</strong>) = ½ ‖z<sub>i</sub> − h<sub>i</sub>(<strong>x</strong>)‖²<sub>Σ<sub>i</sub></sub> + const
+</div>
+
+<p>Summing over all factors, the MAP problem becomes:</p>
+
+<div class="eq">
+  <span class="eq-label">(2.6)</span>
+  <strong>x</strong>* = argmin<sub><strong>x</strong></sub>  ∑<sub>i</sub>  ½ ‖ r<sub>i</sub>(<strong>x</strong>) ‖²<sub>Ω<sub>i</sub></sub>
+  <span class="eq-comment">where r<sub>i</sub>(x) = z<sub>i</sub> − h<sub>i</sub>(x) is the residual of factor i, and Ω<sub>i</sub> = Σ<sub>i</sub>⁻¹ is its information matrix.</span>
+</div>
+
+<p>This is <strong>nonlinear weighted least squares</strong>. Every factor graph problem with Gaussian noise reduces to this form. The prior factor contributes <span class="mi">½ ‖x − μ₀‖²<sub>Ω₀</sub></span> and each measurement factor contributes <span class="mi">½ ‖z<sub>i</sub> − h<sub>i</sub>(x)‖²<sub>Ω<sub>i</sub></sub></span>.</p>
+
+<h3>Whitening: reducing to standard least squares</h3>
+
+<p>Any weighted problem can be converted to standard (unweighted) least squares via the <strong>whitening transformation</strong>. If Ω = L<sup>T</sup>L (upper Cholesky), then:</p>
+
+<div class="eq">
+  ½ ‖r‖²<sub>Ω</sub> = ½ r<sup>T</sup> L<sup>T</sup> L r = ½ ‖L r‖²
+</div>
+
+<p>Defining the whitened residual <span class="mi">r̃ = L r</span>, the problem becomes standard least squares <span class="mi">½ ‖r̃‖²</span>. Whitening is not just a mathematical trick — it has practical importance: the square root factor L (not Ω itself) is what iSAM2 maintains and updates incrementally. Working with L instead of Ω improves numerical stability and enables efficient rank-one updates.</p>
+
+<div class="box box-analogy">
+  <span class="box-title">🧠 Intuition: What does minimizing cost mean physically?</span>
+  <p>Think of each factor as a spring connecting variables to their "target" values or to each other. The spring stiffness is Ω<sub>i</sub> — a tight spring (high Ω) strongly enforces the constraint. The MAP estimate is the configuration where all springs are in equilibrium: no spring can be relaxed without tightening another. Optimization finds this equilibrium configuration. IMU factors are stiff (very precise relative motion); GNSS factors are looser (meter-level position noise).</p>
+</div>
+
+<h3>Maximum Likelihood vs MAP</h3>
+
+<p>When there is <em>no prior</em> (p(x) = const, or equivalently Ω<sub>0</sub> → 0), MAP reduces to Maximum Likelihood Estimation (MLE): just minimize the measurement residuals. In practice for sensor fusion, we always include at least a prior on the first state (to fix the reference frame) and priors on IMU biases (from calibration). Pure MLE on a GNSS/IMU system would produce an under-constrained problem in the orientation space.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 3 — GRAPHICAL MODELS
+════════════════════════════════════════════════════════ -->
+<section id="ch3">
+<h2><span class="ch">03</span> Graphical Models</h2>
+
+<p>We established that the MAP problem involves a product of factors. <em>How</em> we represent and organize those factors determines how efficiently we can solve the problem. Graphical models provide the representation; graph structure exposes the sparsity that makes optimization tractable.</p>
+
+<h3>Why graphs?</h3>
+
+<p>The joint distribution over all state variables and measurements is typically intractable to reason about directly. A vehicle navigating for 10 minutes at 10 Hz has 6000 pose states. The full covariance matrix would be 36,000 × 36,000 — over a billion entries, impossible to store or invert. But in reality, state x<sub>5</sub> only directly constrains states x<sub>4</sub> and x<sub>6</sub> (through the motion model). The GNSS measurement at time 5 constrains only x<sub>5</sub>. The joint distribution has <em>sparse conditional independence structure</em>, and graphs make this structure explicit.</p>
+
+<h3>Bayesian Networks (Directed Graphical Models)</h3>
+
+<p>A Bayesian Network (BN) is a directed acyclic graph (DAG) where each node represents a random variable and each directed edge encodes a conditional dependency. The joint distribution factorizes as:</p>
+
+<div class="eq">
+  p(x<sub>1</sub>, …, x<sub>n</sub>) = ∏<sub>i</sub> p(x<sub>i</sub> | parents(x<sub>i</sub>))
+</div>
+
+<p>For a robot motion model with states x<sub>0:T</sub> and IMU controls u<sub>1:T</sub>:</p>
+
+<div class="eq">
+  p(x<sub>0:T</sub> | u<sub>1:T</sub>) = p(x<sub>0</sub>) · ∏<sub>k=1</sub><sup>T</sup> p(x<sub>k</sub> | x<sub>k−1</sub>, u<sub>k</sub>)
+</div>
+
+<p>This is the standard state-space model underlying the Kalman filter. Bayesian networks are powerful for representing causal, temporal structure.</p>
+
+<h3>Markov Random Fields (Undirected)</h3>
+
+<p>Some constraints are symmetric — a distance between two poses is the same whether you measure it from pose A to pose B or B to A. Undirected graphical models (Markov Random Fields / MRFs) handle these naturally. The joint distribution is a product of <strong>potential functions</strong> over cliques:</p>
+
+<div class="eq">
+  p(x<sub>1</sub>, …, x<sub>n</sub>) = (1/Z) · ∏<sub>c ∈ cliques</sub> ψ<sub>c</sub>(x<sub>c</sub>)
+</div>
+
+<p>where Z is the partition function (normalizing constant). MRFs are natural for loop-closure constraints in SLAM, where closing a loop creates a symmetric constraint between two poses.</p>
+
+<h3>Factor Graphs — the best of both worlds</h3>
+
+<p>Factor graphs are <strong>bipartite graphs</strong> with two types of nodes:</p>
+
+<ul class="steps">
+  <li><span class="step-num">○</span><div><strong>Variable nodes</strong> (circles): represent the unknowns — poses, velocities, biases. These are what we optimize over.</div></li>
+  <li><span class="step-num">■</span><div><strong>Factor nodes</strong> (squares): represent constraints between variables — measurement factors, motion factors, prior factors. Each factor encodes a probability distribution involving its connected variables.</div></li>
+</ul>
+
+<p>Every BN and MRF can be converted to a factor graph. The power of factor graphs is that they make the <em>factorization structure</em> of the joint distribution visually and computationally explicit. The joint probability is:</p>
+
+<div class="eq">
+  <span class="eq-label">(3.1)</span>
+  p(x<sub>1</sub>, …, x<sub>n</sub>) = (1/Z) · ∏<sub>i</sub> f<sub>i</sub>(X<sub>i</sub>)
+  <span class="eq-comment">where f<sub>i</sub> is factor i and X<sub>i</sub> ⊆ {x₁,…,xₙ} is its set of connected variables.</span>
+</div>
+
+<div class="diagram">
+  <div class="diagram-title">Factor Graph Structure — Variable Nodes (circles) and Factor Nodes (squares)</div>
+  <svg viewBox="0 0 720 200" font-family="IBM Plex Mono, monospace" font-size="11">
+    <!-- Variables: x0, x1, x2, x3 -->
+    <circle cx="80"  cy="100" r="28" fill="#1e2335" stroke="#5b9cf6" stroke-width="2"/>
+    <circle cx="240" cy="100" r="28" fill="#1e2335" stroke="#5b9cf6" stroke-width="2"/>
+    <circle cx="400" cy="100" r="28" fill="#1e2335" stroke="#5b9cf6" stroke-width="2"/>
+    <circle cx="560" cy="100" r="28" fill="#1e2335" stroke="#5b9cf6" stroke-width="2"/>
+    <!-- Variable labels -->
+    <text x="80"  y="104" text-anchor="middle" fill="#5b9cf6" font-weight="600">x₀</text>
+    <text x="240" y="104" text-anchor="middle" fill="#5b9cf6" font-weight="600">x₁</text>
+    <text x="400" y="104" text-anchor="middle" fill="#5b9cf6" font-weight="600">x₂</text>
+    <text x="560" y="104" text-anchor="middle" fill="#5b9cf6" font-weight="600">x₃</text>
+    <!-- Factors: prior on x0, motion factors, measurement factors -->
+    <!-- Prior f0 -->
+    <rect x="30" y="36" width="24" height="24" rx="4" fill="#3ecfb0" opacity="0.8"/>
+    <text x="42" y="53" text-anchor="middle" fill="#0d0f17" font-weight="700" font-size="10">f₀</text>
+    <line x1="54" y1="48" x2="80" y2="74" stroke="#3ecfb0" stroke-width="1.5"/>
+    <text x="22" y="28" fill="#606880" font-size="9">prior</text>
+    <!-- Motion f1: x0-x1 -->
+    <rect x="148" y="76" width="24" height="24" rx="4" fill="#8b6cf7" opacity="0.8"/>
+    <text x="160" y="93" text-anchor="middle" fill="#fff" font-weight="700" font-size="10">f₁</text>
+    <line x1="108" y1="100" x2="148" y2="88" stroke="#8b6cf7" stroke-width="1.5"/>
+    <line x1="172" y1="88" x2="212" y2="100" stroke="#8b6cf7" stroke-width="1.5"/>
+    <text x="135" y="126" fill="#606880" font-size="9">motion</text>
+    <!-- Motion f2: x1-x2 -->
+    <rect x="308" y="76" width="24" height="24" rx="4" fill="#8b6cf7" opacity="0.8"/>
+    <text x="320" y="93" text-anchor="middle" fill="#fff" font-weight="700" font-size="10">f₂</text>
+    <line x1="268" y1="100" x2="308" y2="88" stroke="#8b6cf7" stroke-width="1.5"/>
+    <line x1="332" y1="88" x2="372" y2="100" stroke="#8b6cf7" stroke-width="1.5"/>
+    <!-- Motion f3: x2-x3 -->
+    <rect x="468" y="76" width="24" height="24" rx="4" fill="#8b6cf7" opacity="0.8"/>
+    <text x="480" y="93" text-anchor="middle" fill="#fff" font-weight="700" font-size="10">f₃</text>
+    <line x1="428" y1="100" x2="468" y2="88" stroke="#8b6cf7" stroke-width="1.5"/>
+    <line x1="492" y1="88" x2="532" y2="100" stroke="#8b6cf7" stroke-width="1.5"/>
+    <!-- GNSS measurement factors below -->
+    <rect x="216" y="148" width="24" height="24" rx="4" fill="#f5c542" opacity="0.8"/>
+    <text x="228" y="165" text-anchor="middle" fill="#0d0f17" font-weight="700" font-size="10">g₁</text>
+    <line x1="228" y1="148" x2="240" y2="128" stroke="#f5c542" stroke-width="1.5"/>
+    <text x="186" y="188" fill="#606880" font-size="9">GNSS meas.</text>
+    <rect x="536" y="148" width="24" height="24" rx="4" fill="#f5c542" opacity="0.8"/>
+    <text x="548" y="165" text-anchor="middle" fill="#0d0f17" font-weight="700" font-size="10">g₃</text>
+    <line x1="548" y1="148" x2="560" y2="128" stroke="#f5c542" stroke-width="1.5"/>
+    <!-- Legend -->
+    <circle cx="640" cy="48" r="8" fill="none" stroke="#5b9cf6" stroke-width="2"/>
+    <text x="654" y="52" fill="#c8d3ee" font-size="10">Variable node</text>
+    <rect x="632" y="70" width="16" height="16" rx="3" fill="#8b6cf7" opacity="0.8"/>
+    <text x="654" y="82" fill="#c8d3ee" font-size="10">Motion factor</text>
+    <rect x="632" y="94" width="16" height="16" rx="3" fill="#f5c542" opacity="0.8"/>
+    <text x="654" y="106" fill="#c8d3ee" font-size="10">GNSS factor</text>
+    <rect x="632" y="118" width="16" height="16" rx="3" fill="#3ecfb0" opacity="0.8"/>
+    <text x="654" y="130" fill="#c8d3ee" font-size="10">Prior factor</text>
+  </svg>
+</div>
+
+<h3>Conditional independence from graph structure</h3>
+
+<p>The most powerful property of factor graphs is that the graph structure directly encodes <strong>conditional independence</strong>. Two variables x<sub>i</sub> and x<sub>j</sub> are conditionally independent given a set of variables S if all paths between them in the factor graph pass through S. This is the graphical model analog of the Markov property, and it is what allows local computations (variable elimination, belief propagation) to produce globally correct results.</p>
+
+<p>In a GNSS/IMU fusion graph, state x<sub>5</sub> is conditionally independent of state x<sub>2</sub> given x<sub>4</sub> — because the only path from x<sub>2</sub> to x<sub>5</sub> passes through x<sub>3</sub> and x<sub>4</sub>. This means when we update x<sub>5</sub> based on a new GNSS measurement, we only need to process the local neighborhood of the graph, not reprocess everything from the beginning. This is the key insight that makes incremental smoothing (iSAM2) efficient.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 4 — THE FACTOR GRAPH FORMALISM
+════════════════════════════════════════════════════════ -->
+<section id="ch4">
+<h2><span class="ch">04</span> The Factor Graph Formalism</h2>
+
+<p>With the probabilistic motivation and graphical model foundation in place, we can now define factor graphs precisely and show how they encode the GNSS/IMU state estimation problem.</p>
+
+<h3>Formal definition</h3>
+
+<p>A factor graph G = (V, F, E) consists of:</p>
+<ul class="steps">
+  <li><span class="step-num">V</span><div><strong>Variable nodes</strong> V = {x<sub>1</sub>, …, x<sub>n</sub>}: the unknowns we want to estimate. In GNSS/IMU fusion, these are navigation states — pose, velocity, IMU biases at each keyframe.</div></li>
+  <li><span class="step-num">F</span><div><strong>Factor nodes</strong> F = {f<sub>1</sub>, …, f<sub>m</sub>}: the probabilistic constraints. Each factor f<sub>i</sub> is a function of a subset of variables X<sub>i</sub> ⊆ V. It encodes the probability distribution of a measurement or a prior.</div></li>
+  <li><span class="step-num">E</span><div><strong>Edges</strong> E ⊆ V × F: undirected edges connecting each factor to its variable nodes. A factor f<sub>i</sub> is connected to exactly those variables X<sub>i</sub> it depends on. There are no edges between variable nodes or between factor nodes (bipartite).</div></li>
+</ul>
+
+<p>The graph represents the factorized joint distribution of Equation (3.1). Finding the MAP estimate means finding the variable assignment that maximizes this joint, or equivalently minimizes the sum of negative log-factors.</p>
+
+<h3>Factor types in sensor fusion</h3>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Factor Type</th><th>Variables</th><th>Measurement / Role</th><th>Noise Model</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Prior factor</strong></td><td>x<sub>0</sub></td><td>Initial pose from GNSS fix or known start</td><td>Gaussian, user-specified Σ</td></tr>
+    <tr><td><strong>IMU preintegration</strong></td><td>x<sub>k</sub>, x<sub>k+1</sub>, b<sub>k</sub></td><td>Integrated accel + gyro over Δt</td><td>Gaussian, from IMU specs</td></tr>
+    <tr><td><strong>GNSS position</strong></td><td>x<sub>k</sub></td><td>Absolute lat/lon/alt from receiver</td><td>Gaussian, dilution of precision</td></tr>
+    <tr><td><strong>Bias random walk</strong></td><td>b<sub>k</sub>, b<sub>k+1</sub></td><td>IMU bias evolves slowly</td><td>Gaussian, σ from IMU datasheet</td></tr>
+    <tr><td><strong>Zero-velocity update</strong></td><td>x<sub>k</sub></td><td>Detected stationary interval</td><td>Tight Gaussian on velocity = 0</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>The objective function</h3>
+
+<p>For Gaussian factors, the MAP problem (Equation 2.6) with factor graph structure becomes:</p>
+
+<div class="eq">
+  <span class="eq-label">(4.1)</span>
+  F(<strong>x</strong>) = ½ ‖r<sub>prior</sub>(x<sub>0</sub>)‖²<sub>Ω₀</sub>
+             + ∑<sub>k</sub> ½ ‖r<sub>IMU</sub>(x<sub>k</sub>, x<sub>k+1</sub>, b<sub>k</sub>)‖²<sub>Ω<sub>IMU</sub></sub>
+             + ∑<sub>k ∈ GNSS</sub> ½ ‖r<sub>GNSS</sub>(x<sub>k</sub>)‖²<sub>Ω<sub>GPS</sub></sub>
+             + ∑<sub>k</sub> ½ ‖r<sub>bias</sub>(b<sub>k</sub>, b<sub>k+1</sub>)‖²<sub>Ω<sub>b</sub></sub>
+</div>
+
+<p>Each term is a factor's contribution to the total cost. Minimizing F over all state variables simultaneously yields the global MAP estimate — the trajectory that best explains all measurements given the noise models.</p>
+
+<h3>The information matrix and sparsity</h3>
+
+<p>When we linearize F around a current estimate (Chapter 5), the resulting Hessian H has exactly the same sparsity pattern as the factor graph connectivity. If two variables x<sub>i</sub> and x<sub>j</sub> are not connected to any common factor, the corresponding H<sub>ij</sub> block is zero. This is why factor graph optimization is tractable at scale: for a chain-structured GNSS/IMU graph (no loop closures), H is <strong>block-tridiagonal</strong> — only O(n) nonzero blocks — and can be solved in O(n) time via forward/backward substitution.</p>
+
+<div class="diagram">
+  <div class="diagram-title">Sparsity Pattern of Hessian H for a 4-State GNSS/IMU Graph</div>
+  <svg viewBox="0 0 480 200" font-family="IBM Plex Mono, monospace" font-size="10">
+    <!-- Matrix grid: 4x4 blocks, each block is a 3x3 cell grid -->
+    <!-- Draw the outer 4x4 block structure -->
+    <defs>
+      <pattern id="filled" width="1" height="1"><rect width="1" height="1" fill="#5b9cf6" opacity="0.6"/></pattern>
+      <pattern id="empty"  width="1" height="1"><rect width="1" height="1" fill="#1e2335"/></pattern>
+    </defs>
+    <!-- Outer boundary -->
+    <rect x="40" y="20" width="160" height="160" rx="4" fill="#1e2335" stroke="#252c40" stroke-width="1"/>
+    <!-- Grid lines (4 blocks, each 40px) -->
+    <line x1="80"  y1="20" x2="80"  y2="180" stroke="#252c40" stroke-width="0.5"/>
+    <line x1="120" y1="20" x2="120" y2="180" stroke="#252c40" stroke-width="0.5"/>
+    <line x1="160" y1="20" x2="160" y2="180" stroke="#252c40" stroke-width="0.5"/>
+    <line x1="40"  y1="60" x2="200" y2="60"  stroke="#252c40" stroke-width="0.5"/>
+    <line x1="40"  y1="100" x2="200" y2="100" stroke="#252c40" stroke-width="0.5"/>
+    <line x1="40"  y1="140" x2="200" y2="140" stroke="#252c40" stroke-width="0.5"/>
+    <!-- Diagonal blocks (always filled) -->
+    <rect x="41"  y="21"  width="38" height="38" rx="2" fill="#5b9cf6" opacity="0.5"/>
+    <rect x="81"  y="61"  width="38" height="38" rx="2" fill="#5b9cf6" opacity="0.5"/>
+    <rect x="121" y="101" width="38" height="38" rx="2" fill="#5b9cf6" opacity="0.5"/>
+    <rect x="161" y="141" width="38" height="38" rx="2" fill="#5b9cf6" opacity="0.5"/>
+    <!-- Off-diagonal (tridiagonal) blocks -->
+    <rect x="81"  y="21"  width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <rect x="41"  y="61"  width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <rect x="121" y="61"  width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <rect x="81"  y="101" width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <rect x="161" y="101" width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <rect x="121" y="141" width="38" height="38" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <!-- Row/col labels -->
+    <text x="60"  y="14" text-anchor="middle" fill="#606880">x₀</text>
+    <text x="100" y="14" text-anchor="middle" fill="#606880">x₁</text>
+    <text x="140" y="14" text-anchor="middle" fill="#606880">x₂</text>
+    <text x="180" y="14" text-anchor="middle" fill="#606880">x₃</text>
+    <text x="34" y="45"  text-anchor="end" fill="#606880">x₀</text>
+    <text x="34" y="85"  text-anchor="end" fill="#606880">x₁</text>
+    <text x="34" y="125" text-anchor="end" fill="#606880">x₂</text>
+    <text x="34" y="165" text-anchor="end" fill="#606880">x₃</text>
+    <!-- Legend and note -->
+    <rect x="240" y="40" width="14" height="14" rx="2" fill="#5b9cf6" opacity="0.5"/>
+    <text x="260" y="52" fill="#c8d3ee">Diagonal: self-coupling</text>
+    <rect x="240" y="64" width="14" height="14" rx="2" fill="#8b6cf7" opacity="0.4"/>
+    <text x="260" y="76" fill="#c8d3ee">Off-diag: IMU coupling</text>
+    <rect x="240" y="88" width="14" height="14" rx="2" fill="#1e2335" stroke="#252c40"/>
+    <text x="260" y="100" fill="#606880">Zero (no shared factor)</text>
+    <text x="240" y="130" fill="#606880" font-size="9">Block-tridiagonal structure</text>
+    <text x="240" y="145" fill="#606880" font-size="9">→ O(n) solve with Cholesky</text>
+    <text x="240" y="160" fill="#606880" font-size="9">vs O(n³) for dense matrix</text>
+  </svg>
+</div>
+
+<h3>A minimal working example in Python (GTSAM)</h3>
+
+<p>Before diving into the optimization algorithms, here is a complete minimal factor graph: 1D robot position estimated from two noisy measurements. This makes the abstract formalism concrete.</p>
+
+<pre><span class="pp">import</span> gtsam
+<span class="pp">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># --- Define variable keys ---</span>
+<span class="cm"># GTSAM uses integer keys to identify variables</span>
+X0 = gtsam.symbol(<span class="st">'x'</span>, <span class="nu">0</span>)   <span class="cm"># position at time 0</span>
+X1 = gtsam.symbol(<span class="st">'x'</span>, <span class="nu">1</span>)   <span class="cm"># position at time 1</span>
+
+<span class="cm"># --- Create an empty nonlinear factor graph ---</span>
+graph = gtsam.NonlinearFactorGraph()
+
+<span class="cm"># --- Prior factor: x0 ~ N(0.0, sigma=0.5) ---</span>
+prior_noise = gtsam.noiseModel.Isotropic.Sigma(<span class="nu">1</span>, <span class="nu">0.5</span>)
+graph.add(gtsam.PriorFactorDouble(X0, <span class="nu">0.0</span>, prior_noise))
+
+<span class="cm"># --- Between factor: x1 - x0 ~ N(1.0, sigma=0.1) (odometry) ---</span>
+odom_noise = gtsam.noiseModel.Isotropic.Sigma(<span class="nu">1</span>, <span class="nu">0.1</span>)
+graph.add(gtsam.BetweenFactorDouble(X0, X1, <span class="nu">1.0</span>, odom_noise))
+
+<span class="cm"># --- Unary measurement: x1 ~ N(1.2, sigma=0.3) (GPS) ---</span>
+gps_noise = gtsam.noiseModel.Isotropic.Sigma(<span class="nu">1</span>, <span class="nu">0.3</span>)
+graph.add(gtsam.PriorFactorDouble(X1, <span class="nu">1.2</span>, gps_noise))
+
+<span class="cm"># --- Initial values (linearization point) ---</span>
+init = gtsam.Values()
+init.insert(X0, <span class="nu">0.0</span>)
+init.insert(X1, <span class="nu">1.0</span>)
+
+<span class="cm"># --- Optimize with Gauss-Newton ---</span>
+params = gtsam.GaussNewtonParams()
+params.setRelativeErrorTol(<span class="nu">1e-6</span>)
+optimizer = gtsam.GaussNewtonOptimizer(graph, init, params)
+result = optimizer.optimize()
+
+<span class="cm"># --- Extract result ---</span>
+print(<span class="st">f"x0 = {result.atDouble(X0):.4f}"</span>)   <span class="cm"># ≈ 0.000</span>
+print(<span class="st">f"x1 = {result.atDouble(X1):.4f}"</span>)   <span class="cm"># ≈ 1.057 (weighted avg of 1.0+0.0 and 1.2)</span>
+
+<span class="cm"># --- Marginal covariances ---</span>
+marginals = gtsam.Marginals(graph, result)
+print(<span class="st">f"cov(x1) = {marginals.marginalCovariance(X1)[0,0]:.4f}"</span>)  <span class="cm"># ≈ 0.0082</span>
+<span class="code-label">Python · GTSAM</span></pre>
+
+<div class="box box-tip">
+  <span class="box-title">💡 Why is x1 ≈ 1.057, not 1.0 or 1.2?</span>
+  <p>The result is the information-weighted average of two constraints on x<sub>1</sub>: the odometry says x<sub>1</sub> = x<sub>0</sub> + 1.0 = 1.0 with σ=0.1 (Ω=100), and the GPS says x<sub>1</sub> = 1.2 with σ=0.3 (Ω=11.1). The MAP estimate weights by information: (100·1.0 + 11.1·1.2) / (100 + 11.1) ≈ 1.021. The prior on x<sub>0</sub> is relatively weak (σ=0.5), pulling x<sub>1</sub> slightly toward a lower value. This is exactly what the factor graph optimizer computes.</p>
+</div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 5 — NONLINEAR LEAST SQUARES
+════════════════════════════════════════════════════════ -->
+<section id="ch5">
+<h2><span class="ch">05</span> Nonlinear Least Squares</h2>
+
+<p>The objective function F(x) in Equation (4.1) is nonlinear because the measurement functions h<sub>i</sub>(x) are nonlinear (rotation matrices, trigonometric functions, etc.). We cannot solve for the minimum analytically. We iteratively linearize and solve linear systems — this is the foundation of all factor graph solvers.</p>
+
+<h3>Residuals and the cost function</h3>
+
+<p>For each factor i, define the <strong>residual</strong>:</p>
+
+<div class="eq">
+  r<sub>i</sub>(<strong>x</strong>) = z<sub>i</sub> − h<sub>i</sub>(X<sub>i</sub>) ∈ ℝ<sup>m<sub>i</sub></sup>
+  <span class="eq-comment">z<sub>i</sub>: actual measurement · h<sub>i</sub>: predicted measurement from current state · m<sub>i</sub>: measurement dimension</span>
+</div>
+
+<p>The total cost is:</p>
+
+<div class="eq">
+  <span class="eq-label">(5.1)</span>
+  F(<strong>x</strong>) = ½ ∑<sub>i</sub> r<sub>i</sub>(<strong>x</strong>)<sup>T</sup> Ω<sub>i</sub> r<sub>i</sub>(<strong>x</strong>) = ½ ‖<strong>r</strong>(<strong>x</strong>)‖²<sub>Ω</sub>
+  <span class="eq-comment">where r(x) stacks all residuals and Ω is the block-diagonal information matrix.</span>
+</div>
+
+<p>For a Gaussian measurement factor, r<sub>i</sub> = 0 when the measurement is perfectly predicted. For a GNSS factor, r<sub>GNSS</sub> = p<sub>measured</sub> − R<sub>body→world</sub> · p<sub>state</sub> measures how much the current trajectory state disagrees with the GNSS fix.</p>
+
+<h3>Jacobians and linearization</h3>
+
+<p>To linearize, expand r<sub>i</sub> around the current estimate <strong>x</strong><sub>0</sub> using a first-order Taylor expansion:</p>
+
+<div class="eq">
+  <span class="eq-label">(5.2)</span>
+  r<sub>i</sub>(<strong>x</strong><sub>0</sub> + δ) ≈ r<sub>i</sub>(<strong>x</strong><sub>0</sub>) + J<sub>i</sub> δ
+  <span class="eq-comment">J<sub>i</sub> = ∂r<sub>i</sub>/∂x |<sub>x₀</sub> ∈ ℝ<sup>m<sub>i</sub> × n</sup> is the Jacobian of factor i evaluated at x₀.</span>
+</div>
+
+<p>Substituting into (5.1) and minimizing over δ:</p>
+
+<div class="eq">
+  <span class="eq-label">(5.3)</span>
+  F(<strong>x</strong><sub>0</sub> + δ) ≈ ½ ∑<sub>i</sub> (r<sub>i</sub> + J<sub>i</sub>δ)<sup>T</sup> Ω<sub>i</sub> (r<sub>i</sub> + J<sub>i</sub>δ)
+              = ½ δ<sup>T</sup> H δ + b<sup>T</sup> δ + const
+</div>
+
+<p>where:</p>
+
+<div class="eq">
+  H = ∑<sub>i</sub> J<sub>i</sub><sup>T</sup> Ω<sub>i</sub> J<sub>i</sub>   <em>(approximate Hessian, positive semi-definite)</em>
+  <br>
+  b = ∑<sub>i</sub> J<sub>i</sub><sup>T</sup> Ω<sub>i</sub> r<sub>i</sub>   <em>(gradient of cost at x₀)</em>
+</div>
+
+<h3>The Gauss-Newton method</h3>
+
+<p>Setting the gradient of the quadratic approximation to zero gives the <strong>normal equations</strong>:</p>
+
+<div class="eq">
+  <span class="eq-label">(5.4)</span>
+  H · δ = −b     →     δ* = −H<sup>−1</sup> b
+  <span class="eq-comment">The Gauss-Newton step — solve this linear system, then update x₁ = x₀ ⊕ δ*.</span>
+</div>
+
+<p>The "⊕" notation is intentional: for variables living on manifolds (like rotations), the update is not simple addition but a retraction (Chapter 7). For Euclidean variables, ⊕ is just addition.</p>
+
+<p>The full Gauss-Newton iteration:</p>
+
+<pre><span class="kw">def</span> <span class="fn">gauss_newton</span>(factors, x0, max_iter=<span class="nu">50</span>, tol=<span class="nu">1e-8</span>):
+    x = x0.copy()
+    <span class="kw">for</span> iteration <span class="kw">in</span> <span class="fn">range</span>(max_iter):
+        <span class="cm"># Step 1: Evaluate all residuals and Jacobians at current x</span>
+        H = np.zeros((n, n))          <span class="cm"># Hessian accumulator</span>
+        b = np.zeros(n)               <span class="cm"># Gradient accumulator</span>
+        cost = <span class="nu">0.0</span>
+
+        <span class="kw">for</span> factor <span class="kw">in</span> factors:
+            r, J = factor.evaluate(x)  <span class="cm"># residual and Jacobian</span>
+            Omega = factor.information_matrix()
+            H += J.T @ Omega @ J       <span class="cm"># accumulate Hessian</span>
+            b += J.T @ Omega @ r       <span class="cm"># accumulate gradient</span>
+            cost += <span class="nu">0.5</span> * r @ Omega @ r
+
+        <span class="cm"># Step 2: Solve normal equations H·δ = -b</span>
+        delta = np.linalg.solve(H, -b)
+
+        <span class="cm"># Step 3: Update state (retract on manifold)</span>
+        x = retract(x, delta)
+
+        <span class="cm"># Step 4: Check convergence</span>
+        <span class="kw">if</span> np.linalg.norm(delta) &lt; tol:
+            <span class="kw">break</span>
+
+    <span class="kw">return</span> x, cost
+<span class="code-label">Python · Pseudocode</span></pre>
+
+<div class="box box-warn">
+  <span class="box-title">⚠️ Gauss-Newton Pitfall: Initialization sensitivity</span>
+  <p>Gauss-Newton is a <em>local</em> method. It finds a local minimum near the starting point. For sensor fusion, a poor initialization (e.g., starting at zero velocity when the vehicle is actually moving at 20 m/s) will produce a wrong local minimum or divergence. Always initialize from a reasonable first guess: dead reckoning with IMU integration, or the previous optimizer solution. The IMU preintegration makes this natural — the propagated state is an excellent initial guess.</p>
+</div>
+
+<h3>Levenberg-Marquardt (LM)</h3>
+
+<p>Gauss-Newton can diverge when the linear approximation is poor — this happens far from the minimum (early iterations) or in regions of high curvature. The Levenberg-Marquardt algorithm adds a damping term that interpolates between Gauss-Newton and gradient descent:</p>
+
+<div class="eq">
+  <span class="eq-label">(5.5)</span>
+  (H + λ D) · δ = −b
+  <span class="eq-comment">D is usually diag(H) (diagonal scaling), λ ≥ 0 is the damping parameter.</span>
+</div>
+
+<p>The damping parameter λ is adapted automatically:</p>
+
+<ul class="steps">
+  <li><span class="step-num">↑</span><div>If the step <em>increased</em> cost (step was bad): increase λ → move toward gradient descent (smaller, safer step).</div></li>
+  <li><span class="step-num">↓</span><div>If the step <em>decreased</em> cost (step was good): decrease λ → move toward Gauss-Newton (larger, faster step).</div></li>
+</ul>
+
+<p>LM has a beautiful trust-region interpretation: λ implicitly controls the radius of a ball around the current point within which the quadratic model is trusted. When things go wrong, shrink the ball; when they go right, expand it. This makes LM robust to poor initialization and widely used in robotics (Ceres Solver, GTSAM both use LM variants).</p>
+
+<h3>Convergence criteria</h3>
+
+<p>Three standard checks determine convergence. All three should pass before declaring success:</p>
+
+<div class="eq">
+  ‖δ‖ &lt; ε₁               <em>step size is negligibly small</em>
+  <br>
+  ‖b‖ = ‖J<sup>T</sup>Ωr‖ &lt; ε₂   <em>gradient is negligibly small (at minimum)</em>
+  <br>
+  |ΔF / F| &lt; ε₃           <em>relative cost change is negligible</em>
+</div>
+
+<p>Typical values: ε₁ = 10<sup>−8</sup>, ε₂ = 10<sup>−5</sup>, ε₃ = 10<sup>−6</sup>. For sensor fusion with well-conditioned problems, convergence in 5–15 Gauss-Newton iterations is typical. The cost of one iteration is dominated by solving the linear system, which we address next.</p>
+
+<h3>Analytic vs automatic differentiation</h3>
+
+<p>Computing Jacobians J<sub>i</sub> = ∂r<sub>i</sub>/∂x has two practical approaches:</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Method</th><th>How</th><th>Speed</th><th>Accuracy</th><th>Effort</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Analytic</strong></td><td>Derive ∂r/∂x by hand or with a CAS, implement in code</td><td>Fastest</td><td>Exact (up to floating point)</td><td>High — error-prone derivation</td></tr>
+    <tr><td><strong>Automatic diff</strong></td><td>Dual numbers or adjoint (Ceres, GTSAM with Expression)</td><td>Fast (1–3× slower)</td><td>Machine precision</td><td>Low — write residual once</td></tr>
+    <tr><td><strong>Numerical</strong></td><td>Finite differences: (r(x+ε) − r(x)) / ε</td><td>Slow (~2n evaluations)</td><td>Limited by step size ε</td><td>Zero — use for testing only</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>For performance-critical sensor fusion (real-time SLAM), analytic Jacobians are standard. For prototyping and research, GTSAM's Expression and Ceres's automatic differentiation are excellent. Numerical Jacobians are invaluable for <em>checking</em> your analytic implementation: if the analytic and numerical Jacobians disagree by more than ~10<sup>−5</sup>, your analytic derivation has a bug.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 6 — SOLVING THE LINEAR SYSTEM
+════════════════════════════════════════════════════════ -->
+<section id="ch6">
+<h2><span class="ch">06</span> Solving the Linear System</h2>
+
+<p>Each Gauss-Newton iteration reduces to solving the linear system H·δ = −b, where H is a large sparse symmetric positive definite (SPD) matrix. The efficiency of this solve — exploiting the sparsity from the factor graph structure — is what makes large-scale sensor fusion tractable.</p>
+
+<h3>The sparsity of H</h3>
+
+<p>H = ∑<sub>i</sub> J<sub>i</sub><sup>T</sup> Ω<sub>i</sub> J<sub>i</sub> inherits the sparsity of the Jacobians. Block H<sub>jk</sub> is nonzero only when variables x<sub>j</sub> and x<sub>k</sub> appear together in at least one factor. For a sequential GNSS/IMU trajectory with no loop closures, H is block-tridiagonal (each state only directly coupled to its neighbors). This sparsity is the key property that separates factor graph backends from brute-force matrix inversion.</p>
+
+<h3>Cholesky factorization</h3>
+
+<p>For an SPD matrix H, the standard solver is Cholesky factorization: H = L L<sup>T</sup> where L is lower triangular. Then:</p>
+
+<div class="eq">
+  H δ = −b
+  <br>
+  L L<sup>T</sup> δ = −b
+  <br>
+  L y = −b   <em>(forward substitution, O(nnz))</em>
+  <br>
+  L<sup>T</sup> δ = y   <em>(backward substitution, O(nnz))</em>
+</div>
+
+<p>where nnz is the number of nonzero entries in L. For a tridiagonal H of size n×n, nnz = O(n) and the entire solve is O(n). Compare this to O(n<sup>3</sup>) for dense Cholesky — the difference for a 10,000-state trajectory is roughly 10<sup>12</sup> vs 10<sup>4</sup> operations.</p>
+
+<h3>Variable ordering and fill-in</h3>
+
+<p>When Cholesky-factoring a sparse H, the triangular factor L can be <em>denser</em> than H — this is called <strong>fill-in</strong>. The amount of fill-in depends critically on the <strong>variable ordering</strong> (the order in which variables appear in the vector x, which determines the row/column order in H).</p>
+
+<p>Consider a factor graph with a loop closure: state x<sub>0</sub> and state x<sub>100</sub> are connected by a factor. This creates H<sub>0,100</sub> ≠ 0, and Cholesky propagates this coupling to fill all blocks H<sub>i,j</sub> for 0 ≤ i,j ≤ 100. The optimal ordering (nested dissection, COLAMD, AMD) minimizes fill-in by clever reordering. In practice, GTSAM and g2o use COLAMD or AMD automatically — the programmer rarely needs to think about this.</p>
+
+<div class="box box-info">
+  <span class="box-title">Elimination ordering = tree structure</span>
+  <p>There is a deep connection between variable elimination order and graph structure. Eliminating variables one by one from the factor graph produces a <strong>Bayes net</strong> (the directed graphical model equivalent) — this is the Cholesky factorization viewed as a graphical operation. The Cholesky factor L <em>is</em> the information matrix of this Bayes net. Good elimination orderings correspond to trees or near-tree structures in the graph, which minimize fill-in.</p>
+</div>
+
+<h3>QR factorization and the square root information form</h3>
+
+<p>An alternative to Cholesky is to factor the Jacobian matrix J directly (before forming H = J<sup>T</sup>ΩJ):</p>
+
+<div class="eq">
+  J̃ = Q R   <em>(thin QR factorization, J̃ = L<sup>T</sup><sub>Ω</sub> J is the whitened Jacobian)</em>
+  <br>
+  H = J̃<sup>T</sup> J̃ = R<sup>T</sup> Q<sup>T</sup> Q R = R<sup>T</sup> R
+</div>
+
+<p>The upper triangular R is the <strong>square root information matrix</strong> (also called the R-factor or ℛ). Solving the normal equations becomes R<sup>T</sup> R δ = −b, equivalent to Cholesky but numerically more stable (H's condition number is the square of J's condition number — QR avoids this squaring). GTSAM internally maintains R and updates it incrementally.</p>
+
+<h3>iSAM: Incremental Smoothing and Mapping</h3>
+
+<p>In online sensor fusion, new states and factors are added continuously. Rerunning Cholesky from scratch every time is wasteful — most of the existing factorization is still valid. iSAM (Kaess et al., 2008) exploits this by maintaining the Cholesky factor and updating it incrementally using <strong>rank-one (or rank-k) updates</strong> when new factors arrive.</p>
+
+<p>The cost of adding a new factor that involves m variables is O(m·nnz<sub>affected</sub>) rather than O(n·nnz<sub>total</sub>). For a chain-structured problem, this is O(1) amortized per new factor — the same cost as the EKF, but with globally consistent estimates.</p>
+
+<h3>iSAM2 and the Bayes tree</h3>
+
+<p>iSAM had a limitation: when a non-leaf variable is affected by a new measurement (e.g., an old pose receives a loop closure), the entire subtree below it in the elimination tree must be refactored. iSAM2 (Kaess et al., 2012) solves this with the <strong>Bayes tree</strong> — a data structure that organizes the factorized Bayes net into cliques, enabling truly local updates.</p>
+
+<div class="diagram">
+  <div class="diagram-title">Bayes Tree Structure — Cliques and Separator Sets</div>
+  <svg viewBox="0 0 600 220" font-family="IBM Plex Mono, monospace" font-size="10.5">
+    <!-- Root clique -->
+    <rect x="220" y="14" width="160" height="48" rx="8" fill="#1e2335" stroke="#5b9cf6" stroke-width="1.5"/>
+    <text x="300" y="36" text-anchor="middle" fill="#5b9cf6" font-weight="700" font-size="11">Root Clique</text>
+    <text x="300" y="52" text-anchor="middle" fill="#c8d3ee" font-size="10">{x₀, x₁, b₀}</text>
+    <!-- Left child -->
+    <rect x="80" y="110" width="160" height="48" rx="8" fill="#1e2335" stroke="#8b6cf7" stroke-width="1.5"/>
+    <text x="160" y="132" text-anchor="middle" fill="#8b6cf7" font-weight="700" font-size="11">Child Clique</text>
+    <text x="160" y="148" text-anchor="middle" fill="#c8d3ee" font-size="10">{x₂, x₃ | x₁, b₁}</text>
+    <!-- Right child -->
+    <rect x="360" y="110" width="160" height="48" rx="8" fill="#1e2335" stroke="#8b6cf7" stroke-width="1.5"/>
+    <text x="440" y="132" text-anchor="middle" fill="#8b6cf7" font-weight="700" font-size="11">Child Clique</text>
+    <text x="440" y="148" text-anchor="middle" fill="#c8d3ee" font-size="10">{x₄, x₅ | x₃, b₂}</text>
+    <!-- Grandchild -->
+    <rect x="80" y="196" width="160" height="20" rx="4" fill="#1e2335" stroke="#252c40"/>
+    <text x="160" y="210" text-anchor="middle" fill="#606880" font-size="9.5">{x₆, x₇ | x₅}</text>
+    <!-- Connecting lines -->
+    <line x1="300" y1="62"  x2="160" y2="110" stroke="#252c40" stroke-width="1.5"/>
+    <line x1="300" y1="62"  x2="440" y2="110" stroke="#252c40" stroke-width="1.5"/>
+    <line x1="160" y1="158" x2="160" y2="196" stroke="#252c40" stroke-width="1.5"/>
+    <!-- Separator labels -->
+    <text x="208" y="90" fill="#606880" font-size="9" text-anchor="middle">sep: {x₁}</text>
+    <text x="392" y="90" fill="#606880" font-size="9" text-anchor="middle">sep: {x₃}</text>
+    <!-- Annotation -->
+    <text x="490" y="30" fill="#606880" font-size="9">| = separator</text>
+    <text x="490" y="44" fill="#606880" font-size="9">(shared vars)</text>
+    <text x="490" y="66" fill="#3ecfb0" font-size="9">New factor →</text>
+    <text x="490" y="80" fill="#3ecfb0" font-size="9">only update</text>
+    <text x="490" y="94" fill="#3ecfb0" font-size="9">affected subtree</text>
+  </svg>
+</div>
+
+<p>When a new measurement arrives, iSAM2:</p>
+
+<ol class="steps">
+  <li><span class="step-num">1</span><div>Identifies the <strong>affected cliques</strong> — those in the subtree rooted at the clique containing the new variables.</div></li>
+  <li><span class="step-num">2</span><div><strong>Removes</strong> the affected cliques from the Bayes tree (converting them back to factors).</div></li>
+  <li><span class="step-num">3</span><div><strong>Adds</strong> the new factor and <strong>re-eliminates</strong> only the affected variables (a local Cholesky on a small subproblem).</div></li>
+  <li><span class="step-num">4</span><div>Updates the Bayes tree with the new cliques and propagates <strong>back-substitution</strong> (fluid relinearization) only through affected variables.</div></li>
+</ol>
+
+<p>For a chain graph (no loop closures), only one clique is ever affected per new measurement — O(1) work. For loop closures, multiple cliques may need re-elimination, but the tree structure keeps this local. In practice, iSAM2 achieves near-constant time per factor addition for most SLAM/fusion problems.</p>
+
+<h3>Library comparison</h3>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Library</th><th>Backend</th><th>Incremental</th><th>Languages</th><th>Best for</th></tr></thead>
+  <tbody>
+    <tr><td><strong>GTSAM</strong></td><td>iSAM2, Bayes tree, QR/Cholesky</td><td>Yes (iSAM2)</td><td>C++, Python</td><td>Sensor fusion, SLAM, smoothing</td></tr>
+    <tr><td><strong>g2o</strong></td><td>Sparse Cholesky (CHOLMOD, csparse)</td><td>No (batch)</td><td>C++</td><td>Pose graph SLAM, fast batch</td></tr>
+    <tr><td><strong>Ceres</strong></td><td>Sparse/dense Schur, LM</td><td>No (batch)</td><td>C++</td><td>General NLS, bundle adjustment</td></tr>
+    <tr><td><strong>manif</strong></td><td>Thin wrapper, user provides solver</td><td>No</td><td>C++, Python</td><td>Manifold operations only</td></tr>
+    <tr><td><strong>SE-Sync</strong></td><td>Riemannian optimization</td><td>No</td><td>MATLAB, C++</td><td>Rotation averaging, global minimum</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>For GNSS/IMU fusion, GTSAM is the standard choice: it has prebuilt IMU preintegration factors, a Python API, active development, and iSAM2 for real-time use. The examples in Part 2 use GTSAM.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPTER 7 — LIE GROUPS AND MANIFOLD OPTIMIZATION
+════════════════════════════════════════════════════════ -->
+<section id="ch7">
+<h2><span class="ch">07</span> Lie Groups &amp; Manifold Optimization</h2>
+
+<p>Everything in Chapters 2–6 assumed variables live in Euclidean space ℝ<sup>n</sup>, where <em>adding</em> a correction δ to a state x is well-defined. Rotations break this assumption. This chapter explains why, and provides the mathematical tools to fix it.</p>
+
+<h3>The problem with representing rotations</h3>
+
+<p>A 3D rotation has exactly <strong>3 degrees of freedom</strong> (pitch, roll, yaw). Yet every common representation has problems:</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Representation</th><th>DoF</th><th>Parameters</th><th>Problem</th></tr></thead>
+  <tbody>
+    <tr><td>Euler angles (ZYX)</td><td>3</td><td>3</td><td>Gimbal lock: singularity at pitch = ±90°</td></tr>
+    <tr><td>Rotation matrix R ∈ SO(3)</td><td>3</td><td>9</td><td>6 nonlinear constraints (R<sup>T</sup>R=I, det=1) — over-parameterized</td></tr>
+    <tr><td>Quaternion q ∈ ℝ⁴</td><td>3</td><td>4</td><td>Unit norm constraint ‖q‖=1, double cover (q and −q represent the same rotation)</td></tr>
+    <tr><td>Rotation vector φ ∈ ℝ³</td><td>3</td><td>3</td><td>Singular at ‖φ‖ = 2π, wrapping ambiguity</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>For optimization, the rotation matrix is actually the <em>best</em> internal representation — it is closed under composition (R<sub>1</sub>R<sub>2</sub> is always a rotation matrix) and easy to differentiate. The challenge is that we cannot perform unconstrained optimization over the 9 entries of R — we must ensure the result stays in SO(3). The solution is <strong>optimization on manifolds</strong>.</p>
+
+<h3>Groups and Lie groups</h3>
+
+<p>A <strong>group</strong> (G, ∘) is a set G with a binary operation ∘ satisfying: (1) closure (a∘b ∈ G), (2) associativity, (3) identity element e, (4) inverse for every element. The set of 3D rotations with composition forms the group SO(3).</p>
+
+<p>A <strong>Lie group</strong> is a group that is simultaneously a smooth manifold — you can do calculus on it. The group operation and inverse are smooth (differentiable) maps. This is what enables the connection to optimization: we can define derivatives, tangent spaces, and exponential maps.</p>
+
+<h3>The special orthogonal group SO(3)</h3>
+
+<div class="eq">
+  SO(3) = { R ∈ ℝ³ˣ³ : R<sup>T</sup>R = I,  det(R) = +1 }
+</div>
+
+<p>SO(3) is a 3-dimensional manifold embedded in ℝ⁹. It looks locally like ℝ³ near any point, but globally it is curved — think of the surface of a sphere, which locally looks flat but globally is not.</p>
+
+<h4>The Lie algebra so(3)</h4>
+
+<p>The <strong>Lie algebra</strong> g of a Lie group G is the tangent space at the identity element. For SO(3), the identity is I (the 3×3 identity matrix), and the tangent space is the set of skew-symmetric matrices:</p>
+
+<div class="eq">
+  so(3) = { Φ ∈ ℝ³ˣ³ : Φ + Φ<sup>T</sup> = 0 }
+</div>
+
+<p>Every element of so(3) has the form:</p>
+
+<div class="eq">
+  [φ]<sub>×</sub> = <span style="font-family: 'IBM Plex Mono', monospace;">
+  ⎡  0   −φ₃   φ₂ ⎤<br>
+  ⎢  φ₃   0   −φ₁ ⎥<br>
+  ⎣ −φ₂   φ₁   0  ⎦</span>
+  <span class="eq-comment">where φ = (φ₁, φ₂, φ₃)<sup>T</sup> ∈ ℝ³ is the rotation vector (axis × angle).</span>
+</div>
+
+<p>The <strong>hat operator</strong> (∧): φ ∈ ℝ³ → [φ]<sub>×</sub> ∈ so(3) converts a 3D vector to a skew-symmetric matrix. The <strong>vee operator</strong> (∨) is its inverse: [φ]<sub>×</sub><sup>∨</sup> = φ.</p>
+
+<h4>The exponential map: Rodrigues' rotation formula</h4>
+
+<p>The exponential map takes a Lie algebra element (tangent vector at identity) to a Lie group element (a rotation):</p>
+
+<div class="eq">
+  <span class="eq-label">(7.1)</span>
+  Exp(φ) = exp([φ]<sub>×</sub>) = I + <sup>sin θ</sup>/<sub>θ</sub> [φ]<sub>×</sub> + <sup>(1 − cos θ)</sup>/<sub>θ²</sub> [φ]<sub>×</sub>²
+  <span class="eq-comment">where θ = ‖φ‖ is the rotation angle. This is Rodrigues' rotation formula.</span>
+</div>
+
+<p>The inverse, the <strong>logarithmic map</strong>, maps a rotation back to its rotation vector:</p>
+
+<div class="eq">
+  <span class="eq-label">(7.2)</span>
+  Log(R) = <sup>θ</sup>/<sub>2 sin θ</sub> (R − R<sup>T</sup>)<sup>∨</sup>     where  θ = arccos(<sup>trace(R) − 1</sup>/<sub>2</sub>)
+</div>
+
+<p>These formulas are used constantly in factor graph optimization: the IMU preintegration integrates angular velocity by repeatedly applying Exp, and the optimizer computes linearization Jacobians using derivatives of Exp and Log.</p>
+
+<pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">hat</span>(phi):
+    <span class="st">"""R³ → so(3): skew-symmetric matrix from rotation vector."""</span>
+    <span class="kw">return</span> np.array([[       <span class="nu">0</span>, -phi[<span class="nu">2</span>],  phi[<span class="nu">1</span>]],
+                     [ phi[<span class="nu">2</span>],       <span class="nu">0</span>, -phi[<span class="nu">0</span>]],
+                     [-phi[<span class="nu">1</span>],  phi[<span class="nu">0</span>],       <span class="nu">0</span>]])
+
+<span class="kw">def</span> <span class="fn">Exp</span>(phi):
+    <span class="st">"""so(3) → SO(3): Rodrigues' rotation formula."""</span>
+    theta = np.linalg.norm(phi)
+    <span class="kw">if</span> theta &lt; <span class="nu">1e-8</span>:
+        <span class="kw">return</span> np.eye(<span class="nu">3</span>) + hat(phi)   <span class="cm"># first-order approx for small angles</span>
+    K = hat(phi / theta)
+    <span class="kw">return</span> np.eye(<span class="nu">3</span>) + np.sin(theta) * K + (<span class="nu">1</span> - np.cos(theta)) * K @ K
+
+<span class="kw">def</span> <span class="fn">Log</span>(R):
+    <span class="st">"""SO(3) → so(3): matrix logarithm."""</span>
+    theta = np.arccos(np.clip((np.trace(R) - <span class="nu">1</span>) / <span class="nu">2</span>, -<span class="nu">1</span>, <span class="nu">1</span>))
+    <span class="kw">if</span> theta &lt; <span class="nu">1e-8</span>:
+        <span class="kw">return</span> (R - R.T) / <span class="nu">2</span>           <span class="cm"># first-order approx</span>
+    <span class="kw">return</span> (theta / (<span class="nu">2</span> * np.sin(theta))) * (R - R.T)
+
+<span class="kw">def</span> <span class="fn">vee</span>(Phi):
+    <span class="st">"""so(3) → R³: extract rotation vector from skew-symmetric matrix."""</span>
+    <span class="kw">return</span> np.array([Phi[<span class="nu">2</span>,<span class="nu">1</span>], Phi[<span class="nu">0</span>,<span class="nu">2</span>], Phi[<span class="nu">1</span>,<span class="nu">0</span>]])
+
+<span class="cm"># Example: 90-degree rotation about z-axis</span>
+phi = np.array([<span class="nu">0</span>, <span class="nu">0</span>, np.pi/<span class="nu">2</span>])
+R = <span class="fn">Exp</span>(phi)
+phi_recovered = vee(<span class="fn">Log</span>(R))
+print(phi_recovered)  <span class="cm"># [0, 0, 1.5708] ✓</span>
+<span class="code-label">Python · SO(3)</span></pre>
+
+<h3>The special Euclidean group SE(3)</h3>
+
+<p>A full rigid body pose (position + orientation) is an element of SE(3):</p>
+
+<div class="eq">
+  SE(3) = SO(3) ⋉ ℝ³ = { T = [R  t; 0  1] ∈ ℝ⁴ˣ⁴ : R ∈ SO(3), t ∈ ℝ³ }
+</div>
+
+<p>The 4×4 matrix T is the <strong>homogeneous transformation matrix</strong>. It acts on homogeneous points p = [x;y;z;1] as T·p = [Rp+t; 1]. The Lie algebra is se(3) — 4×4 matrices of the form [[φ]<sub>×</sub>, ρ; 0, 0] where ρ ∈ ℝ³. SE(3) has 6 degrees of freedom (3 rotation + 3 translation), corresponding to the 6 DoF state of a rigid body.</p>
+
+<h3>Perturbation model: how to update rotations in optimization</h3>
+
+<p>In Gauss-Newton, we compute a correction δ ∈ ℝ⁶ (for SE(3)) and need to apply it to the current estimate T. The <strong>right perturbation model</strong> is:</p>
+
+<div class="eq">
+  <span class="eq-label">(7.3)</span>
+  T<sub>new</sub> = T<sub>old</sub> · Exp(δ)
+  <span class="eq-comment">Apply the perturbation on the right (in the body frame). Left perturbation (Exp(δ)·T) uses the world frame.</span>
+</div>
+
+<p>This is the <strong>retraction</strong> — the operation that takes a current point on the manifold and a tangent vector, and produces a new point on the manifold. It is what the optimizer uses instead of naive addition. The choice of left vs right perturbation affects the form of the Jacobians but not the final result; GTSAM uses right perturbation for its Pose3 type.</p>
+
+<h3>Jacobians on manifolds</h3>
+
+<p>When a factor residual r<sub>i</sub> depends on a rotation R, the Jacobian ∂r<sub>i</sub>/∂R is not well-defined in the usual sense (R is constrained). Instead, we compute the <strong>perturbation Jacobian</strong>:</p>
+
+<div class="eq">
+  <span class="eq-label">(7.4)</span>
+  J<sub>i,R</sub> = lim<sub>δ→0</sub>  [r<sub>i</sub>(R · Exp(δ)) − r<sub>i</sub>(R)] / δ  ∈ ℝ<sup>m×3</sup>
+  <span class="eq-comment">This is the derivative of the residual with respect to a small right-perturbation of R in so(3).</span>
+</div>
+
+<p>The 3-column Jacobian J<sub>i,R</sub> is what enters the normal equations. It accounts for the curved geometry of SO(3) and produces numerically stable updates that always stay on the rotation manifold. GTSAM computes these Jacobians automatically for its built-in types (Rot3, Pose3) and provides a framework for user-defined types.</p>
+
+<div class="box box-analogy">
+  <span class="box-title">🧠 Why does this matter for GNSS/IMU fusion?</span>
+  <p>The IMU state includes orientation R<sub>k</sub> ∈ SO(3) at every keyframe. When the optimizer computes a Gauss-Newton step, it produces a 3D correction δφ<sub>k</sub> ∈ ℝ³ for each orientation. Applying R<sub>k,new</sub> = R<sub>k,old</sub> · Exp(δφ<sub>k</sub>) guarantees R<sub>k,new</sub> is exactly a rotation matrix — there is no need for normalization or Gram-Schmidt re-orthogonalization. The manifold structure is maintained automatically by the optimizer.</p>
+</div>
+
+<h3>The full state manifold for GNSS/IMU</h3>
+
+<p>The navigation state at keyframe k is:</p>
+
+<div class="eq">
+  X<sub>k</sub> = (R<sub>k</sub>, p<sub>k</sub>, v<sub>k</sub>, b<sup>a</sup><sub>k</sub>, b<sup>g</sup><sub>k</sub>)
+  ∈ SO(3) × ℝ³ × ℝ³ × ℝ³ × ℝ³
+</div>
+
+<p>where R<sub>k</sub> is orientation, p<sub>k</sub> is position, v<sub>k</sub> is velocity, b<sup>a</sup><sub>k</sub> is accelerometer bias, and b<sup>g</sup><sub>k</sub> is gyroscope bias. The total dimension per keyframe is 3+3+3+3+3 = 15 parameters (but only 3+3+3+3+3 = 15 degrees of freedom since SO(3) has 3 DoF). The full trajectory over K keyframes has 15K variables. A typical 1-minute drive at 10 Hz keyframes has 600×15 = 9,000 optimization variables — well within the reach of modern sparse solvers.</p>
+
+</section>
+
+<!-- BATCH NAVIGATION -->
+<div class="batch-nav">
+  <a href="../blog.html">
+    <div class="dir">← Back</div>
+    <div class="title">Blog Index</div>
+  </a>
+  <a href="factor-graph-sensor-fusion-2.html">
+    <div class="dir">Next: Part 2 →</div>
+    <div class="title">IMU Preintegration, GNSS Model &amp; Full Pipeline</div>
+  </a>
+</div>
+
+</main>
+</div>
+
+<script>
+// Sidebar active link on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a.nav-item');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(link => link.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
