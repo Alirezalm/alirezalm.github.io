@@ -16,12 +16,6 @@ Personal research website for Alireza Olama, Postdoctoral Researcher at Åbo Aka
 - **PsFIT**: GPU-accelerated Parallel Sparse Fitting Toolbox
 - **SCOT**: Sparse Convex Optimization Toolkit
 
-## Setup
-
-1. **Add your photo**: Add `photo.jpg` (recommended: 400x400px+, square aspect ratio)
-
-2. **Update Google Scholar link**: Replace `YOUR_ID` in `index.html` with your actual Google Scholar ID
-
 ## Technologies
 
 - HTML5 / CSS3 (Grid, Flexbox, CSS variables)
